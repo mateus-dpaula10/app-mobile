@@ -31,21 +31,16 @@ export default function StoreProducts() {
         if (!result.canceled) {
             const asset = result.assets[0];
 
-            setImages(prev => [
+            setImages((prev) => [
                 ...prev,
                 {
-                    uri: asset.uri,
-                    name: asset.fileName ?? `image_${Date.now()}.jpg`,
-                    type: asset.type ? `${asset.type}/${getFileExtension(asset.uri)}` : 'image/jpeg'
-                },
+                    uri: asset.uri.startsWith('file://') ? asset.uri : `file://${asset.uri}`,
+                    name: asset.fileName || `photo_${Date.now()}.jpg`,
+                    type: asset.type === 'image' ? 'image/jpeg' : asset.type || 'image/jpeg'
+                }
             ]);
         }
     };
-
-    function getFileExtension(uri: string) {
-        const match = /\.(\w+)$/.exec(uri);
-        return match ? match[1] : 'jpeg';
-    }
 
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(false);
@@ -76,11 +71,17 @@ export default function StoreProducts() {
         formData.append('price', price);
         formData.append('stock_quantity', stock);
 
-        images.forEach((image, index) => {            
-            formData.append(`images[]`, {
+        images.forEach((image) => {
+            let mimeType = 'image/jpeg';
+            const ext = image.name?.split('.').pop()?.toLowerCase();
+
+            if (ext === 'png') mimeType = 'image/png';
+            else if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
+
+            formData.append('images[]', {
                 uri: image.uri,
                 name: image.name,
-                type: image.type
+                type: mimeType,
             } as any);
         });
 
