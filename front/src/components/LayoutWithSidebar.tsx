@@ -1,4 +1,4 @@
-import { Box, HStack, Icon, Text, VStack } from "native-base";
+import { Box, HStack, Icon, ScrollView, Text, VStack } from "native-base";
 import React from "react";
 import { sidebarOptions } from "../data/sidebarOptions";
 import { Pressable } from "react-native";
@@ -41,9 +41,9 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
                 </VStack>
             </Box>
 
-            <Box flex={1} bg="white" p="4">
+            <ScrollView flex={1} bg="white" p="4">
                 {children}
-            </Box>
+            </ScrollView>
         </HStack>
     );
 }

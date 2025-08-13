@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Box, Button, CheckIcon, Input, Select, Text, useToast, VStack } from 'native-base';
 import LayoutWithSidebar from '../../components/LayoutWithSidebar';
 import api from '../../services/api';
-import { FlatList } from 'react-native';
+import { FlatList, useWindowDimensions } from 'react-native';
 import axios from 'axios';
 import { Alert } from 'react-native';
 import { isStrongPassword } from '../../utils/validatePassword';
@@ -23,6 +23,7 @@ export default function ManageUsers() {
         password: ''
     });
     const [companies, setCompanies] = useState<Company[]>([]);
+    const [loading, setLoading] = useState(false);
     const [passwordValid, setPasswordValid] = useState(true);
 
     useEffect(() => {
@@ -157,47 +158,15 @@ export default function ManageUsers() {
             });
         }
     };
+    
+    const { width } = useWindowDimensions();
+    const numColumns = width < 500 ? 1 : width < 900 ? 2 : 3;
 
     return (
         <LayoutWithSidebar>
-            {companies && companies.length > 0 ? (
-                <FlatList
-                    data={companies}
-                    keyExtractor={(item) => item.id?.toString() ?? Math.random().toString()}
-                    renderItem={({ item }) => (
-                        <Box borderBottomWidth={1} borderColor="gray.200" p={3}>
-                            <Text bold>{item.legal_name}</Text>
-                            <Text>{item.cnpj}</Text>
-                            <Text>Admin: {item.admin?.email || 'Não cadastrado'}</Text>
-    
-                            <Box flexDirection="row" mt={2}>
-                                <Button 
-                                    size="sm" 
-                                    colorScheme="blue" 
-                                    mr={2}
-                                    onPress={() => handleEdit(item)}
-                                >
-                                    Editar
-                                </Button>
-                                <Button 
-                                    size="sm" 
-                                    colorScheme="red" 
-                                    onPress={() => { 
-                                        if (item.id !== undefined) handleDelete(item.id); 
-                                    }}
-                                >
-                                    Excluir
-                                </Button>
-                            </Box>
-                        </Box>
-                    )}
-                />
-            ) : (
-                <Text fontSize="md" color="gray.500">Nenhuma empresa cadastrada</Text>
-            )}
-
             <VStack mt={10}>
-                <Text bold>Nova empresa</Text>
+                <Text bold>Cadastro de empresa</Text>
+                
                 <Input 
                     placeholder="CNPJ" 
                     value={company.cnpj} 
@@ -270,7 +239,52 @@ export default function ManageUsers() {
                 )}
 
                 <Button onPress={handleSubmit} mt={2}>Cadastrar</Button>
-            </VStack>
+
+                {loading ? (
+                    <Text mt={10}>Carregando empresas...</Text>
+                ) : (                
+                    <FlatList
+                        data={companies}
+                        keyExtractor={(item) => item.id?.toString() ?? Math.random().toString()}
+                        numColumns={numColumns}
+                        columnWrapperStyle={numColumns > 1 ? { justifyContent: 'space-between' } : undefined}
+                        renderItem={({ item }) => (
+                            <Box 
+                                flex={1}
+                                borderWidth={1} 
+                                borderColor="gray.200"
+                                borderRadius="md"
+                                p={3}
+                                m={2}
+                            >
+                                <Text bold>{item.legal_name}</Text>
+                                <Text>{item.cnpj}</Text>
+                                <Text>Admin: {item.admin?.email || 'Não cadastrado'}</Text>
+        
+                                <Box flexDirection="row" mt={2}>
+                                    <Button 
+                                        size="sm" 
+                                        colorScheme="blue" 
+                                        mr={2}
+                                        onPress={() => handleEdit(item)}
+                                    >
+                                        Editar
+                                    </Button>
+                                    <Button 
+                                        size="sm" 
+                                        colorScheme="red" 
+                                        onPress={() => { 
+                                            if (item.id !== undefined) handleDelete(item.id); 
+                                        }}
+                                    >
+                                        Excluir
+                                    </Button>
+                                </Box>
+                            </Box>
+                        )}
+                    />
+                )}
+            </VStack>            
         </LayoutWithSidebar>
     );
 }
