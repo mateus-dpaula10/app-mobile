@@ -18,12 +18,27 @@ class ProductController extends Controller
 
     public function store(Request $request) 
     {
+        $request->merge([
+            'price' => str_replace(',', '.', $request->price)
+        ]);
+
         $request->validate([
-            'name'           => 'required|string|max:255',
-            'description'    => 'nullable|string',
-            'price'          => 'required|numeric|min:0',
-            'stock_quantity' => 'required|integer|min:0',
-            'images.*'       => 'nullable|image|mimes:jpg,jpeg,png|max:2048'
+            'name'                    => 'required|string|max:255',
+            'description'             => 'nullable|string',
+            'price'                   => 'required|numeric|min:0',
+            'stock_quantity'          => 'required|integer|min:0',
+            'images.*'                => 'nullable|image|mimes:jpg,jpeg,png|max:2048'
+        ], [
+            'name.required'           => 'O campo nome é obrigatório.',
+            'price.required'          => 'O campo preço é obrigatório.',
+            'price.numeric'           => 'O campo preço deve ser um número.',
+            'price.min'               => 'O campo preço deve ser no mínimo 0.',
+            'stock_quantity.required' => 'O campo quantidade de estoque é obrigatório.',
+            'stock_quantity.integer'  => 'O campo quantidade de estoque deve ser um número inteiro.',
+            'stock_quantity.min'      => 'O campo quantidade de estoque deve ser no mínimo 0.',
+            'images.*.image'          => 'Cada arquivo deve ser uma imagem.',
+            'images.*.mimes'          => 'As imagens devem estar no formato jpg, jpeg ou png.',
+            'images.*.max'            => 'Cada imagem não pode ultrapassar 2MB.'
         ]);
 
         $product = Product::create([
@@ -48,13 +63,30 @@ class ProductController extends Controller
 
     public function update(Request $request, Product $product) 
     {
+        $request->merge([
+            'price' => str_replace(',', '.', $request->price)
+        ]);
+        
         $request->validate([
-            'name'             => 'required|string|max:255',
-            'description'      => 'nullable|string',
-            'price'            => 'required|numeric|min:0',
-            'stock_quantity'   => 'required|integer|min:0',
-            'images.*'         => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-            'existing_images.' => 'nullable|array'
+            'name'                     => 'required|string|max:255',
+            'description'              => 'nullable|string',
+            'price'                    => 'required|numeric|min:0',
+            'stock_quantity'           => 'required|integer|min:0',
+            'images.*'                 => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'existing_images.'         => 'nullable|array'
+        ], [
+            'name.required'            => 'O campo nome é obrigatório.',
+            'price.required'           => 'O campo preço é obrigatório.',
+            'price.numeric'            => 'O campo preço deve ser um número.',
+            'price.min'                => 'O campo preço deve ser no mínimo 0.',
+            'stock_quantity.required'  => 'O campo quantidade de estoque é obrigatório.',
+            'stock_quantity.integer'   => 'O campo quantidade de estoque deve ser um número inteiro.',
+            'stock_quantity.min'       => 'O campo quantidade de estoque deve ser no mínimo 0.',
+            'images.*.image'           => 'Cada arquivo deve ser uma imagem.',
+            'images.*.mimes'           => 'As imagens devem estar no formato jpg, jpeg ou png.',
+            'images.*.max'             => 'Cada imagem não pode ultrapassar 2MB.',
+            'existing_images.array'    => 'As imagens existentes devem ser enviadas em formato de lista.',
+            'existing_images.*.string' => 'Cada imagem existente deve ser identificada por um caminho válido.'
         ]);
 
         $product->update($request->only('name', 'description', 'price', 'stock_quantity'));

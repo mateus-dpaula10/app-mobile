@@ -364,7 +364,7 @@ export default function StoreProducts() {
                                 )}
                                 <Text bold mt={2}>{item.name}</Text>
                                 <Text fontSize="sm">{item.description}</Text>
-                                <Text>Preço: R$ {Number(item.price).toFixed(2)}</Text>
+                                <Text>Preço: R$ {Number(item.price).toFixed(2).replace('.', ',')}</Text>
                                 <Text>Estoque: {item.stock_quantity}</Text>
 
                                 <Box flexDirection="row" mt={2}>
