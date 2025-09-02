@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Product;
 use App\Models\ProductImage;
+use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
@@ -23,13 +24,14 @@ class ProductController extends Controller
         ]);
 
         $request->validate([
-            'name'                    => 'required|string|max:255',
+            'name'                    => 'required|string|max:255|unique:products,name',
             'description'             => 'nullable|string',
             'price'                   => 'required|numeric|min:0',
             'stock_quantity'          => 'required|integer|min:0',
             'images.*'                => 'nullable|image|mimes:jpg,jpeg,png|max:2048'
         ], [
             'name.required'           => 'O campo nome é obrigatório.',
+            'name.unique'             => 'Já existe um produto com este nome.',
             'price.required'          => 'O campo preço é obrigatório.',
             'price.numeric'           => 'O campo preço deve ser um número.',
             'price.min'               => 'O campo preço deve ser no mínimo 0.',
@@ -68,14 +70,16 @@ class ProductController extends Controller
         ]);
         
         $request->validate([
-            'name'                     => 'required|string|max:255',
+            'name'                     => 'required|string|max:255|unique:products,name,' . $product->id,
             'description'              => 'nullable|string',
             'price'                    => 'required|numeric|min:0',
             'stock_quantity'           => 'required|integer|min:0',
             'images.*'                 => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-            'existing_images.'         => 'nullable|array'
+            'existing_images'   => 'array',   
+            'existing_images.*' => 'string'   
         ], [
             'name.required'            => 'O campo nome é obrigatório.',
+            'name.unique'              => 'Já existe um produto com este nome.',
             'price.required'           => 'O campo preço é obrigatório.',
             'price.numeric'            => 'O campo preço deve ser um número.',
             'price.min'                => 'O campo preço deve ser no mínimo 0.',
@@ -92,12 +96,20 @@ class ProductController extends Controller
         $product->update($request->only('name', 'description', 'price', 'stock_quantity'));
 
         $existingImages = $request->input('existing_images', []);
-        $product->images()
-            ->whereNotIn('image_path', $existingImages)
-            ->each(function ($img) {
-                Storage::disk('public')->delete($img->image_path);
-                $img->delete();
-            });
+
+        if ($request->has('existing_images') || $request->hasFile('images')) {
+            $product->images()
+                ->when(!empty($existingImages), function ($query) use ($existingImages) {
+                    $query->whereNotIn('image_path', $existingImages);
+                })
+                ->get()
+                ->each(function ($img) {
+                    if (Storage::disk('public')->exists($img->image_path)) {
+                        Storage::disk('public')->delete($img->image_path);
+                    }
+                    $img->delete();
+                });
+        }
 
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $image) {
