@@ -116,9 +116,11 @@ export default function StoreProducts() {
         formData.append('price', price);
         formData.append('stock_quantity', stock);
 
-        existingImages.forEach(path => {
-            formData.append('existing_path[]', path);
-        });
+        if (existingImages.length > 0) {
+            existingImages.forEach(path => {
+                formData.append('existing_images[]', path);
+            });
+        }
 
         images.forEach((image) => {
             if (Platform.OS === 'web' && image.file) {

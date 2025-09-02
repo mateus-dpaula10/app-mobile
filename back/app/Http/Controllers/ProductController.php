@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Product;
 use App\Models\ProductImage;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
@@ -19,12 +20,21 @@ class ProductController extends Controller
 
     public function store(Request $request) 
     {
+        $authUser = auth()->user();
+
         $request->merge([
             'price' => str_replace(',', '.', $request->price)
         ]);
 
         $request->validate([
-            'name'                    => 'required|string|max:255|unique:products,name',
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('products')->where(function ($query) use ($authUser) {
+                    return $query->where('company_id', $authUser->company_id);
+                })
+            ],
             'description'             => 'nullable|string',
             'price'                   => 'required|numeric|min:0',
             'stock_quantity'          => 'required|integer|min:0',
@@ -65,18 +75,26 @@ class ProductController extends Controller
 
     public function update(Request $request, Product $product) 
     {
+        $authUser = auth()->user();
+
         $request->merge([
             'price' => str_replace(',', '.', $request->price)
         ]);
         
         $request->validate([
-            'name'                     => 'required|string|max:255|unique:products,name,' . $product->id,
-            'description'              => 'nullable|string',
-            'price'                    => 'required|numeric|min:0',
-            'stock_quantity'           => 'required|integer|min:0',
-            'images.*'                 => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-            'existing_images'   => 'array',   
-            'existing_images.*' => 'string'   
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('products')->ignore($product->id)->where(function ($query) use ($authUser) {
+                    return $query->where('company_id', $authUser->company_id);
+                }),
+            ],
+            'description'     => 'nullable|string',
+            'price'           => 'required|numeric|min:0',
+            'stock_quantity'  => 'required|integer|min:0',
+            'images.*'        => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'existing_images' => 'nullable|array' 
         ], [
             'name.required'            => 'O campo nome é obrigatório.',
             'name.unique'              => 'Já existe um produto com este nome.',
@@ -97,18 +115,13 @@ class ProductController extends Controller
 
         $existingImages = $request->input('existing_images', []);
 
-        if ($request->has('existing_images') || $request->hasFile('images')) {
-            $product->images()
-                ->when(!empty($existingImages), function ($query) use ($existingImages) {
-                    $query->whereNotIn('image_path', $existingImages);
-                })
-                ->get()
-                ->each(function ($img) {
-                    if (Storage::disk('public')->exists($img->image_path)) {
-                        Storage::disk('public')->delete($img->image_path);
-                    }
-                    $img->delete();
-                });
+        $imagesToDelete = $product->images()
+            ->whereNotIn('image_path', $existingImages)
+            ->get();
+
+        foreach ($imagesToDelete as $img) {
+            Storage::disk('public')->delete($img->image_path);
+            $img->delete();
         }
 
         if ($request->hasFile('images')) {
@@ -120,7 +133,7 @@ class ProductController extends Controller
             }
         }
 
-        return response()->json($product->load('images'), 201);
+        return response()->json($product->load('images'), 200);
     }
 
     public function destroy(Product $product)

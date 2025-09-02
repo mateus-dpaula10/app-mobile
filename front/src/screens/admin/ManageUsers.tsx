@@ -24,6 +24,7 @@ export default function ManageUsers() {
     });
     const [companies, setCompanies] = useState<Company[]>([]);
     const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
     const [passwordValid, setPasswordValid] = useState(true);
 
     useEffect(() => {
@@ -56,6 +57,8 @@ export default function ManageUsers() {
     };
 
     const handleSubmit = async () => {
+        setSaving(true);
+
         try {
             const isEditMode = !!company.id;
 
@@ -114,6 +117,8 @@ export default function ManageUsers() {
                 description: 'A empresa não foi cadastrada.',
                 duration: 3000
             });
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -238,7 +243,7 @@ export default function ManageUsers() {
                     </Text>
                 )}
 
-                <Button onPress={handleSubmit} mt={2}>Cadastrar</Button>
+                <Button onPress={handleSubmit} isLoading={saving} mt={2}>Cadastrar</Button>
 
                 {loading ? (
                     <Text mt={10}>Carregando empresas...</Text>
