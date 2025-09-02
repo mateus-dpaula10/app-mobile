@@ -16,22 +16,30 @@ import DeliveryTasks from '../screens/delivery/DeliveryTasks';
 import DeliveryProfile from '../screens/delivery/DeliveryProfile';
 import ManageUsers from '../screens/admin/ManageUsers';
 import AdminDashboard from '../screens/admin/AdminDashboard';
+import RegisterScreen from '../screens/RegisterScreen';
+import CustomerStores from '../screens/client/CustomerStores';
 
 const Stack = createNativeStackNavigator();
 
 export default function AppRoutes() {
-    const { user, logout } = useAuth();
+    const { user, logout, loading } = useAuth();
 
-    const HomeComponent = user?.role && {
-        client: HomeClient,
-        store: HomeStore,
-        delivery: HomeDelivery,
-        admin: HomeAdmin
-    }[user.role];
+    if (loading) {
+        return null;
+    }
+
+    const HomeComponent = user?.role 
+        ? {
+            client: HomeClient,
+            store: HomeStore,
+            delivery: HomeDelivery,
+            admin: HomeAdmin
+        }[user.role]
+        : null;
 
     useEffect(() => {
         if (user && !HomeComponent) {
-        logout();
+            logout();
         }
     }, [user, HomeComponent]);
 
@@ -39,6 +47,7 @@ export default function AppRoutes() {
         return (
             <Stack.Navigator screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="Login" component={LoginScreen} />
+                <Stack.Screen name="Register" component={RegisterScreen} />
             </Stack.Navigator>
         );
     }
@@ -48,6 +57,7 @@ export default function AppRoutes() {
             <Stack.Screen name="Home" component={HomeComponent} />
 
             {/* client */}
+            <Stack.Screen name="CustomerStores" component={CustomerStores} />
             <Stack.Screen name="ClientOrders" component={ClientOrders} />
             <Stack.Screen name="ClientProfile" component={ClientProfile} />
 

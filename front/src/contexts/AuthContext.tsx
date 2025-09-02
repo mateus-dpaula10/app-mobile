@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';  
+import api from '../services/api';
 
 type User = {
     id: number;
@@ -25,8 +26,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const loadUser = async () => {
             try {
                 const storedUser = await AsyncStorage.getItem('@user');
-                if (storedUser) {
+                const token = await AsyncStorage.getItem('@token');
+                if (storedUser && token) {
                     setUser(JSON.parse(storedUser));
+                    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
                 }
             } catch (e) {
                 console.error('Erro ao carregar usuário:', e);
@@ -42,12 +46,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(userData);
         await AsyncStorage.setItem('@user', JSON.stringify(userData));
         await AsyncStorage.setItem('@token', token);
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     };
 
     const logout = async () => {
         setUser(null);
         await AsyncStorage.removeItem('@user');
         await AsyncStorage.removeItem('@token');
+        delete api.defaults.headers.common['Authorization'];
     };
 
     return (

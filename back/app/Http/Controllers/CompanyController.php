@@ -22,7 +22,7 @@ class CompanyController extends Controller
             'cnpj'           => 'required|string|unique:companies,cnpj',
             'admin.email'    => 'required|email|unique:users,email',
             'admin.name'     => 'required|string|max:255',
-            'admin.password' => 'required|min:6'
+            'admin.password' => 'required|min:8'
         ], [
             'cnpj.required'              => 'O campo CNPJ é obrigatório.',
             'cnpj.unique'                => 'Este CNPJ já está cadastrado.',
@@ -104,5 +104,14 @@ class CompanyController extends Controller
         $company->delete();
         
         return response()->json(['message' => 'Empresa excluída com sucesso.']);
+    }
+    
+    public function companies()
+    {
+        $companies = Company::with(['products.images'])
+            ->where('active', true)
+            ->get();
+        
+        return response()->json($companies);
     }
 }

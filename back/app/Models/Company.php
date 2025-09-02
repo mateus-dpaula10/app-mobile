@@ -19,4 +19,9 @@ class Company extends Model
     {
         return $this->hasOne(User::class)->where('role', 'store');
     }
+
+    public function products()
+    {
+        return $this->hasMany(Product::class);
+    }
 }

@@ -1,7 +1,8 @@
-import { Home, ShoppingCart, Truck, User } from 'lucide-react-native';
+import { Home, ShoppingCart, Truck, User, ClipboardList  } from 'lucide-react-native';
 
 export const sidebarOptions: Record<string, { label: string; screen: string; icon: any }[]> = {
     client: [
+        { label: 'Lojas', screen: 'CustomerStores', icon: ClipboardList },
         { label: 'Meus Pedidos', screen: 'ClientOrders', icon: ShoppingCart },
         { label: 'Perfil', screen: 'ClientProfile', icon: User }
     ],

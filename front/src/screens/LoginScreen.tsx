@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Box, Button, Center, Icon, Image, Input, useToast, VStack } from 'native-base';
+import { Box, Button, Center, Icon, Image, Input, useToast, VStack, Text } from 'native-base';
 import api from '../services/api';
 import { Pressable } from 'react-native';
 import { Eye, EyeOff } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
 
 const logo = require('../../assets/login.png');
  
@@ -13,6 +14,7 @@ export default function LoginScreen() {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const toast = useToast();
+    const navigation = useNavigation();
 
     const handleLogin = async () => {
         try {
@@ -59,6 +61,11 @@ export default function LoginScreen() {
                         } 
                     />
                     <Button mt={2} onPress={handleLogin}>Entrar</Button>
+                    <Pressable onPress={() => navigation.navigate('Register')}>
+                        <Text mt={2} color="blue.500" textAlign="center">
+                            Não tem conta? Cadastre-se
+                        </Text>
+                    </Pressable>
                 </VStack>
             </Box>
         </Center>
