@@ -13,6 +13,7 @@ export default function ManageUsers() {
     const [company, setCompany] = useState<Company>({
         cnpj: '',
         legal_name: '',
+        final_name: '',
         phone: '',
         address: '',
         plan: ''
@@ -62,7 +63,7 @@ export default function ManageUsers() {
         try {
             const isEditMode = !!company.id;
 
-            if (!isEditMode && !isStrongPassword(admin.password)) {
+            if (!isEditMode && !isStrongPassword(admin.password || '')) {
                 toast.show({
                     title: 'Senha fraca',
                     description: 'A senha deve conter no mínimo 8 caracteres, incluindo letras maiúsculas, minúsculas, números e caracteres especiais.',
@@ -97,6 +98,7 @@ export default function ManageUsers() {
 
             setCompany({
                 legal_name: '',
+                final_name: '',
                 cnpj: '',
                 phone: '',
                 address: '',
@@ -125,17 +127,18 @@ export default function ManageUsers() {
     const handleEdit = (company: Company) => {
         setCompany({
             id: company.id,
-            cnpj: company.cnpj,
-            legal_name: company.legal_name,
-            phone: company.phone,
-            address: company.address,
-            plan: company.plan
+            cnpj: company.cnpj ?? '',
+            legal_name: company.legal_name ?? '',
+            final_name: company.final_name ?? '',
+            phone: company.phone ?? '',
+            address: company.address ?? '',
+            plan: company.plan ?? ''
         });
 
         if (company.admin) {
             setAdmin({
-                name: company.admin.name,
-                email: company.admin.email,
+                name: company.admin.name ?? '',
+                email: company.admin.email ?? '',
                 password: ''
             });
         } else {
@@ -167,10 +170,48 @@ export default function ManageUsers() {
     const { width } = useWindowDimensions();
     const numColumns = width < 500 ? 1 : width < 900 ? 2 : 3;
 
+    const renderCompanyCard = ({ item }: { item: Company }) => (
+        <Box
+            flex={1}
+            borderWidth={1}
+            borderColor="gray.200"
+            borderRadius="lg"
+            bg="white"
+            shadow={2}
+            overflow="hidden"
+            m={2}
+        >
+            <VStack p={3} space={2}>
+                <Text bold fontSize="md">{item.final_name}</Text>
+                <Text fontSize="sm" color="gray.600">CNPJ: {item.cnpj}</Text>
+                <Text fontSize="sm" color="gray.600">Admin: {item.admin?.email || 'Não cadastrado'}</Text>
+                {item.plan && <Text fontSize="sm" color="gray.600">Plano: {item.plan}</Text>}
+
+                <Box flexDirection="row" mt={2} justifyContent="flex-start">
+                    <Button 
+                        size="sm" 
+                        colorScheme="blue" 
+                        mr={2}
+                        onPress={() => handleEdit(item)}
+                        >
+                        Editar
+                    </Button>
+                    <Button 
+                        size="sm" 
+                        colorScheme="red" 
+                        onPress={() => item.id !== undefined && handleDelete(item.id)}
+                        >
+                        Excluir
+                    </Button>
+                </Box>
+            </VStack>
+        </Box>
+    );
+
     return (
         <LayoutWithSidebar>
             <VStack mt={10}>
-                <Text bold>Cadastro de empresa</Text>
+                <Text bold>Cadastro da loja</Text>
                 
                 <Input 
                     placeholder="CNPJ" 
@@ -197,7 +238,13 @@ export default function ManageUsers() {
                     value={company.address}
                     mt={1}
                     onChangeText={v => setCompany(c => ({ ...c, address: v }))}
-                />            
+                /> 
+                <Input 
+                    placeholder="Nome da loja" 
+                    value={company.final_name} 
+                    mt={1}
+                    onChangeText={v => setCompany(c => ({ ...c, final_name: v }))} 
+                />             
                 <Select
                     selectedValue={company.plan}
                     minWidth="200"
@@ -231,13 +278,13 @@ export default function ManageUsers() {
                     value={admin.password}
                     secureTextEntry 
                     mt={1}
-                    borderColor={admin.password.length > 0 && !passwordValid ? 'red.500' : 'gray.300'}
+                    borderColor={ (admin.password || '').length > 0 && !passwordValid ? 'red.500' : 'gray.300'}
                     onChangeText={v => {
                         setAdmin(a => ({ ...a, password: v }));
                         setPasswordValid(isStrongPassword(v));
                     }} 
                 />
-                {admin.password.length > 0 && !passwordValid && (
+                { (admin.password || '').length > 0 && !passwordValid && (
                     <Text color="red.500" fontSize="xs">
                         A senha deve conter ao menos 8 caracteres, com letra maiúscula, minúscula, número e símbolo.
                     </Text>
@@ -253,40 +300,7 @@ export default function ManageUsers() {
                         keyExtractor={(item) => item.id?.toString() ?? Math.random().toString()}
                         numColumns={numColumns}
                         columnWrapperStyle={numColumns > 1 ? { justifyContent: 'space-between' } : undefined}
-                        renderItem={({ item }) => (
-                            <Box 
-                                flex={1}
-                                borderWidth={1} 
-                                borderColor="gray.200"
-                                borderRadius="md"
-                                p={3}
-                                m={2}
-                            >
-                                <Text bold>{item.legal_name}</Text>
-                                <Text>{item.cnpj}</Text>
-                                <Text>Admin: {item.admin?.email || 'Não cadastrado'}</Text>
-        
-                                <Box flexDirection="row" mt={2}>
-                                    <Button 
-                                        size="sm" 
-                                        colorScheme="blue" 
-                                        mr={2}
-                                        onPress={() => handleEdit(item)}
-                                    >
-                                        Editar
-                                    </Button>
-                                    <Button 
-                                        size="sm" 
-                                        colorScheme="red" 
-                                        onPress={() => { 
-                                            if (item.id !== undefined) handleDelete(item.id); 
-                                        }}
-                                    >
-                                        Excluir
-                                    </Button>
-                                </Box>
-                            </Box>
-                        )}
+                        renderItem={renderCompanyCard}
                     />
                 )}
             </VStack>            

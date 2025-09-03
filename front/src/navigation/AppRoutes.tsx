@@ -18,15 +18,58 @@ import ManageUsers from '../screens/admin/ManageUsers';
 import AdminDashboard from '../screens/admin/AdminDashboard';
 import RegisterScreen from '../screens/RegisterScreen';
 import CustomerStores from '../screens/client/CustomerStores';
+import CustomerStoresProducts from '../screens/client/CustomerStoresProducts';
 
-const Stack = createNativeStackNavigator();
+type ProductImage = {
+  id: number;
+  product_id: number;
+  image_path: string;
+}
+
+type Product = {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  stock_quantity: number;
+  company_id: number;
+  images: ProductImage[];
+}
+
+type Store = {
+    id: number;
+    legal_name: string;
+    final_name: string;
+    cnpj: string;
+    phone: string;
+    address: string;
+    plan: string;
+    active: boolean;
+    products: Product[];
+}
+
+export type RootStackParamList = {
+    Login: undefined;
+    Register: undefined;
+    Home: undefined;
+    CustomerStores: undefined;
+    CustomerStoresProducts: { store: Store };
+    ClientOrders: undefined;
+    ClientProfile: undefined;
+    StoreProducts: undefined;
+    StoreOrders: undefined;
+    DeliveryTasks: undefined;
+    DeliveryProfile: undefined;
+    AdminDashboard: undefined;
+    ManageUsers: undefined;
+};
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppRoutes() {
     const { user, logout, loading } = useAuth();
 
-    if (loading) {
-        return null;
-    }
+    if (loading) return null;
 
     const HomeComponent = user?.role 
         ? {
@@ -38,9 +81,7 @@ export default function AppRoutes() {
         : null;
 
     useEffect(() => {
-        if (user && !HomeComponent) {
-            logout();
-        }
+        if (user && !HomeComponent) logout();
     }, [user, HomeComponent]);
 
     if (!user || !HomeComponent) {
@@ -58,6 +99,7 @@ export default function AppRoutes() {
 
             {/* client */}
             <Stack.Screen name="CustomerStores" component={CustomerStores} />
+            <Stack.Screen name="CustomerStoresProducts" component={CustomerStoresProducts} />
             <Stack.Screen name="ClientOrders" component={ClientOrders} />
             <Stack.Screen name="ClientProfile" component={ClientProfile} />
 

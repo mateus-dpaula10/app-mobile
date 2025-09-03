@@ -16,6 +16,6 @@ export const sidebarOptions: Record<string, { label: string; screen: string; ico
     ],
     admin: [
         { label: 'Painel', screen: 'AdminDashboard', icon: Home },
-        { label: 'Usuários', screen: 'ManageUsers', icon: User }
+        { label: 'Lojas', screen: 'ManageUsers', icon: ClipboardList }
     ]
 };

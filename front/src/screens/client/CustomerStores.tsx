@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Button, Checkbox, HStack, Input, Spinner, Text, useToast, VStack } from 'native-base';
+import { Box, Button, Input, Text, useToast, VStack } from 'native-base';
 import LayoutWithSidebar from '../../components/LayoutWithSidebar';
 import api from '../../services/api';
 import { FlatList } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 type ProductImage = {
   id: number;
@@ -24,6 +24,7 @@ type Product = {
 type Store = {
     id: number;
     legal_name: string;
+    final_name: string;
     cnpj: string;
     phone: string;
     address: string;
@@ -31,13 +32,19 @@ type Store = {
     active: boolean;
     products: Product[];
 }
+
+type RootStackParamList = {
+    CustomerStores: undefined;
+    CustomerStoresProducts: { store: Store }
+};
+
+type Props = NativeStackScreenProps<RootStackParamList, 'CustomerStores'>
  
-export default function CustomerStores() {
-    const [search, setSearch] = useState('');
-    const toast = useToast();
+export default function CustomerStores({ navigation }: Props) {
     const [loading, setLoading] = useState(true);
     const [stores, setStores] = useState<Store[]>([]);
-    const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
+    const [search, setSearch] = useState('');
+    const toast = useToast();
 
     useEffect(() => {
         const fetchStores = async () => {
@@ -60,54 +67,41 @@ export default function CustomerStores() {
     }, []);
 
     const filteredStores = stores
-        .map(store => {
-            const products = store.legal_name.toLowerCase().includes(search.toLowerCase())
-                ? store.products
-                : store.products.filter(p => 
-                    p.name.toLowerCase().includes(search.toLowerCase())
-                );
+        .filter(store => store.final_name.toLowerCase().includes(search.toLowerCase())
+    );
 
-            return {
-                ...store,
-                products
-            };
-        })
-        .filter(store => store.products.length > 0);
-
-    const toggleProduct = (product: Product) => {
-        setSelectedProducts(prev => {
-        const exists = prev.find(p => p.id === product.id);
-            if (exists) return prev.filter(p => p.id !== product.id);
-            return [...prev, product];
-        });
-    };
-
-    const addToCart = async () => {
-        if (!selectedProducts.length) {
-            toast.show({ title: 'Selecione produtos', duration: 2000 });
-            return;
-        }
-
-        try {
-            const token = await AsyncStorage.getItem('@token');
-            await api.post('/cart', { products: selectedProducts.map(p => p.id) }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            toast.show({ title: 'Produtos adicionados ao carrinho', duration: 3000 });
-            setSelectedProducts([]);
-        } catch (err) {
-            console.error(err);
-            toast.show({ title: 'Erro', description: 'Não foi possível adicionar ao carrinho', duration: 3000 });
-        }
-    };
+    const renderStoreCard = (store: Store) => (
+        <Box
+            key={store.id}
+            borderWidth={1}
+            borderColor="gray.200"
+            borderRadius="lg"
+            overflow="hidden"
+            bg="white"
+            shadow={2}
+            m={2}
+            flex={1}
+        >
+            <VStack p={3} space={2}>
+                <Text bold fontSize="lg">{store.final_name}</Text>
+                <Text fontSize="sm" color="gray.600">CNPJ: {store.cnpj}</Text>
+                <Text fontSize="sm" color="gray.600">Telefone: {store.phone}</Text>
+                <Text fontSize="sm" color="gray.600">Endereço: {store.address}</Text>
+                <Text fontSize="sm" color="gray.600">Plano: {store.plan}</Text>
+                <Button mt={2} colorScheme="blue" onPress={() => navigation.navigate('CustomerStoresProducts', { store })}>
+                Ver produtos
+                </Button>
+            </VStack>
+        </Box>
+    );
 
     return (
         <LayoutWithSidebar>
             <VStack mt={10}>
-                <Text bold>Lojas + produtos</Text>  
+                <Text bold fontSize="xl">Lojas disponíveis</Text>  
 
                 <Input  
-                    placeholder="Pesquisar loja ou produto"
+                    placeholder="Pesquisar loja"
                     mt={4}
                     mb={4}
                     value={search}
@@ -119,32 +113,11 @@ export default function CustomerStores() {
                 ) : (
                     <FlatList
                         data={filteredStores} 
+                        numColumns={2}
+                        columnWrapperStyle={{ justifyContent: 'space-between' }}
                         keyExtractor={store => store.id.toString()}
-                        renderItem={({ item: store }) => (
-                            <Box mb={6} borderWidth={1} borderRadius="md" borderColor="gray.200" p={4}>
-                                <Text fontSize="lg" bold mb={2}>{store.legal_name}</Text>
-                                <VStack space={2}>
-                                    {store.products.map(product => (
-                                        <HStack key={product.id} alignItems="center" justifyContent="space-between">
-                                        <Checkbox
-                                            isChecked={!!selectedProducts.find(p => p.id === product.id)}
-                                            onChange={() => toggleProduct(product)}
-                                            value={product.id.toString()}
-                                        >
-                                            <Text ml={2}>{product.name} - R$ {Number(product.price).toFixed(2).replace('.', ',')}</Text>
-                                        </Checkbox>
-                                        </HStack>
-                                    ))}
-                                </VStack>
-                            </Box>
-                        )}
+                        renderItem={({ item }) => renderStoreCard(item)}
                     />
-                )}
-
-                {selectedProducts.length > 0 && (
-                    <Button onPress={addToCart} mt={4}>
-                        Adicionar {selectedProducts.length} produto(s) ao carrinho
-                    </Button>
                 )}
             </VStack>      
         </LayoutWithSidebar>

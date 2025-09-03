@@ -19,11 +19,15 @@ class CompanyController extends Controller
     public function store(Request $request)
     {
         $request->validate([
+            'legal_name'     => 'required|string|max:255',
+            'final_name'     => 'required|string|max:255',
             'cnpj'           => 'required|string|unique:companies,cnpj',
             'admin.email'    => 'required|email|unique:users,email',
             'admin.name'     => 'required|string|max:255',
             'admin.password' => 'required|min:8'
         ], [
+            'legal_name.required'        => 'O nome empresarial é obrigatório.',
+            'final_name.required'        => 'O nome real da loja é obrigatório.',
             'cnpj.required'              => 'O campo CNPJ é obrigatório.',
             'cnpj.unique'                => 'Este CNPJ já está cadastrado.',
             'admin.email.required'       => 'O e-mail do administrador é obrigatório.',
@@ -36,14 +40,14 @@ class CompanyController extends Controller
         ]);
 
         $company = Company::create($request->only([
-            'legal_name', 'cnpj', 'phone', 'address', 'plan'
+            'legal_name', 'final_name', 'cnpj', 'phone', 'address', 'plan'
         ]));
 
         $admin = new User([
             'name' => $request->admin['name'],
             'email' => $request->admin['email'],
             'password' => bcrypt($request->admin['password']),
-            'role' => 'store',
+            'role' => 'store'
         ]);
 
         $admin->company()->associate($company);
@@ -56,6 +60,7 @@ class CompanyController extends Controller
     {
         $request->validate([
             'legal_name'     => 'sometimes|string|max:255',
+            'final_name'     => 'sometimes|string|max:255',
             'cnpj'           => 'sometimes|string|unique:companies,cnpj,' . $company->id,
             'phone'          => 'nullable|string',
             'address'        => 'nullable|string',
@@ -69,6 +74,7 @@ class CompanyController extends Controller
             }]
         ], [
             'legal_name.max'             => 'O nome empresarial não pode ter mais de :max caracteres.',
+            'final_name.max'             => 'O nome real da loja não pode ter mais de :max caracteres.',
             'cnpj.unique'                => 'Este CNPJ já está em uso por outra empresa.',
             'admin.email.email'          => 'Informe um e-mail válido.',
             'admin.email.unique'         => 'Este e-mail já está sendo utilizado.',
@@ -77,7 +83,7 @@ class CompanyController extends Controller
         ]);
 
         $company->update($request->only([
-            'legal_name', 'cnpj', 'phone', 'address', 'plan'
+            'legal_name', 'final_name', 'cnpj', 'phone', 'address', 'plan'
         ]));
 
         if ($request->has('admin') && $company->admin) {
