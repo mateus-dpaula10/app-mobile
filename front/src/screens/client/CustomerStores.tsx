@@ -70,6 +70,17 @@ export default function CustomerStores({ navigation }: Props) {
         .filter(store => store.final_name.toLowerCase().includes(search.toLowerCase())
     );
 
+    function formatPhone(phone: string) {
+        if (!phone) return '';
+        const cleaned = phone.replace(/\D/g, '');
+        if (cleaned.length === 11) {
+            return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+        } else if (cleaned.length === 10) {
+            return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
+        }
+        return phone;
+    }
+
     const renderStoreCard = (store: Store) => (
         <Box
             key={store.id}
@@ -84,12 +95,14 @@ export default function CustomerStores({ navigation }: Props) {
         >
             <VStack p={3} space={2}>
                 <Text bold fontSize="lg">{store.final_name}</Text>
-                <Text fontSize="sm" color="gray.600">CNPJ: {store.cnpj}</Text>
-                <Text fontSize="sm" color="gray.600">Telefone: {store.phone}</Text>
-                <Text fontSize="sm" color="gray.600">Endereço: {store.address}</Text>
-                <Text fontSize="sm" color="gray.600">Plano: {store.plan}</Text>
+                {store.phone && (
+                    <Text fontSize="sm" color="gray.600">Telefone: {formatPhone(store.phone)}</Text>
+                )}
+                {store.address && ((
+                    <Text fontSize="sm" color="gray.600">Endereço: {store.address}</Text>
+                ))}
                 <Button mt={2} colorScheme="blue" onPress={() => navigation.navigate('CustomerStoresProducts', { store })}>
-                Ver produtos
+                    Ver produtos
                 </Button>
             </VStack>
         </Box>

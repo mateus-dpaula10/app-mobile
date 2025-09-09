@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Box, Button, HStack, IconButton, Image, Input, Text, useToast, VStack } from 'native-base';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { AxiosError } from 'axios';
 
 type ProductImage = {
   id: number;
@@ -46,6 +47,13 @@ type RootStackParamList = {
 };
 
 type CustomerStoresProductsProps = NativeStackScreenProps<RootStackParamList, 'CustomerStoresProducts'>;
+
+type ProductCardProps = {
+    product: Product;
+    quantity: number;
+    onAdd: () => void;
+    onRemove: () => void
+};
  
 export default function CustomerStoresProducts({ route }: CustomerStoresProductsProps) {
     const { store } = route.params;
@@ -74,27 +82,50 @@ export default function CustomerStoresProducts({ route }: CustomerStoresProducts
 
         try {
             const token = await AsyncStorage.getItem('@token');
-            await api.post('/cart', {
-                products: cart.map(c => ({ id: c.product.id, quantity: c.quantity }))
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const companyIds = cart.map(c => c.product.company_id);
+            const uniqueCompanyIds = [...new Set(companyIds)];
+
+            if (uniqueCompanyIds.length > 1) {
+                toast.show({
+                    title: 'Atenção',
+                    description: 'Só é possível adicionar produtos da mesma loja ao carrinho',
+                    duration: 3000
+                });
+                return;
+            }
+
+            const response = await api.post(
+                '/cart', 
+                { products: cart.map(c => ({ id: c.product.id, quantity: c.quantity })) },
+                {   headers: { Authorization: `Bearer ${token}` } }
+            );
 
             toast.show({ title: 'Produtos adicionados ao carrinho', duration: 3000 });
             setCart([]);
-        } catch (err) {
+        } catch (err: unknown) {
             console.error(err);
-            toast.show({ title: 'Erro', description: 'Não foi possível adicionar ao carrinho', duration: 3000 });
+            let message = 'Não foi possível adicionar ao carrinho';
+            if (err instanceof AxiosError) {
+                message = err.response?.data?.message || message;
+            }
+            toast.show({ title: 'Erro', description: message, duration: 3000 });
         }
     };
 
-    const renderProductCard = (product: Product) => {   
-        const cartItem = cart.find(c => c.product.id === product.id);
-        const quantity = cartItem?.quantity || 0;
+    function ProductCard({ product, quantity, onAdd, onRemove }: ProductCardProps) {
+        const [currentIndex, setCurrentIndex] = useState(0);
+        const outOfStock = product.stock_quantity <= 0;
+
+        const prevImage = () => {
+            setCurrentIndex(i => (i - 1 + product.images.length) % product.images.length);
+        };
+    
+        const nextImage = () => {
+            setCurrentIndex(i => (i + 1) % product.images.length);
+        };
 
         return (
             <Box
-                key={product.id}
                 borderWidth={1}
                 borderColor="gray.200"
                 borderRadius="lg"
@@ -102,69 +133,68 @@ export default function CustomerStoresProducts({ route }: CustomerStoresProducts
                 bg="white"
                 shadow={2}
                 m={2}
-                flexDirection="row"
             >
-                <FlatList
-                    data={product.images && product.images.length > 0 
-                        ? product.images 
-                        : []}
-                    horizontal
-                    pagingEnabled
-                    showsHorizontalScrollIndicator={false}
-                    keyExtractor={img => `${product.id}-${img.id}`}
-                    renderItem={({ item }) => (
+                {product.images && product.images.length > 0 && (
+                    <Box position="relative" width="100%" height={200}>
                         <Image
-                            source={{ uri: `http://localhost:8000/storage/${item.image_path}` }}
+                            source={{ uri: `http://localhost:8000/storage/${product.images[currentIndex].image_path}` }}
                             alt={product.name}
-                            width={150}
-                            height={150}
+                            width="100%"
+                            height="100%"
                             resizeMode="cover"
                         />
-                    )}
-                    style={{ flexGrow: 0 }}
-                />
-
+                        <HStack position="absolute" top="50%" left={0} right={0} justifyContent="space-between" px={2}>
+                            <IconButton icon={<Ionicons name="chevron-back-circle" size={32} color="white" />} onPress={prevImage} />
+                            <IconButton icon={<Ionicons name="chevron-forward-circle" size={32} color="white" />} onPress={nextImage} />
+                        </HStack>
+                    </Box>
+                )}
+    
                 <VStack flex={1} p={3} space={2}>
-                    <Text bold fontSize="md" numberOfLines={1}>{product.name}</Text>
-                    {product.description ? (
+                    <Text bold fontSize="md">{product.name}</Text>
+                    {product.description &&
                         <Text fontSize="sm" color="gray.600" numberOfLines={2}>{product.description}</Text>
-                    ) : null}
+                    }
                     <Text fontSize="sm" color="gray.800">R$ {Number(product.price).toFixed(2).replace('.', ',')}</Text>
-                    <Text fontSize="sm" color="gray.500">Estoque: {product.stock_quantity}</Text>
-
-                    <HStack alignItems="center" space={2}>
-                        <IconButton
-                            icon={<Ionicons name="remove-circle-outline" size={24} color="gray" />}
-                            onPress={() => updateCart(product, -1)}
-                            isDisabled={quantity <= 0}
-                        />
-                        <Input
-                            value={quantity.toString()}
-                            isReadOnly
-                            textAlign="center"
-                            width={12}
-                            height={10}
-                            fontSize="md"
-                        />
-                        <IconButton
-                            icon={<Ionicons name="add-circle-outline" size={24} color="blue" />}
-                            onPress={() => updateCart(product, 1)}
-                            isDisabled={quantity >= product.stock_quantity}
-                        />
-                    </HStack>
-
+                    
+                    {outOfStock ? (
+                        <Text fontSize="sm" color="red.500" bold>Esgotado</Text>
+                    ) : (
+                        <HStack alignItems="center" space={2}>
+                            <IconButton
+                                icon={<Ionicons name="remove-circle-outline" size={24} color="gray" />}
+                                onPress={onRemove}
+                                isDisabled={quantity <= 0}
+                            />
+                            <Input
+                                value={quantity.toString()}
+                                isReadOnly
+                                textAlign="center"
+                                width={12}
+                                height={10}
+                                fontSize="md"
+                            />
+                            <IconButton
+                                icon={<Ionicons name="add-circle-outline" size={24} color="blue" />}
+                                onPress={onAdd}
+                                isDisabled={quantity >= product.stock_quantity}
+                            />
+                        </HStack>
+                    )}
+    
                     <Button
                         mt={2}
                         size="sm"
                         colorScheme="blue"
-                        onPress={() => updateCart(product, 1)}
+                        onPress={onAdd}
+                        isDisabled={outOfStock}
                     >
-                        Adicionar ao carrinho
+                        {outOfStock ? 'Indisponível' : 'Adicionar ao carrinho'}
                     </Button>
                 </VStack>
             </Box>
         );
-    };
+    }
 
     return (
         <LayoutWithSidebar>
@@ -176,7 +206,18 @@ export default function CustomerStoresProducts({ route }: CustomerStoresProducts
                 <FlatList
                     data={store.products} 
                     keyExtractor={p => p.id.toString()}
-                    renderItem={({ item }) => renderProductCard(item)}
+                    renderItem={({ item }) => {
+                        const cartItem = cart.find(c => c.product.id === item.id);
+                        const quantity = cartItem?.quantity || 0;
+                        return (
+                            <ProductCard
+                                product={item}
+                                quantity={quantity}
+                                onAdd={() => updateCart(item, 1)}
+                                onRemove={() => updateCart(item, -1)}
+                            />
+                        )
+                    }}
                 />
 
                 {cart.length > 0 && (

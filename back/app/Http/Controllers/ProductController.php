@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\Cart;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -141,5 +142,90 @@ class ProductController extends Controller
         $product->delete();
         
         return response()->json(['message' => 'Produto removido']);
+    }
+
+    public function addCart(Request $request)
+    {
+        $authUser = auth()->user();
+
+        $request->validate([
+            'products'            => 'required|array|min:1',
+            'products.*.id'       => 'required|integer|exists:products,id',
+            'products.*.quantity' => 'required|integer|min:1'
+        ]);
+
+        $cartQuery = Cart::query();
+        if ($authUser->role === 'client') {
+            $cartQuery->where('user_id', $authUser->id);
+        } else {
+            $cartQuery->where('company_id', $authUser->company_id);
+        }
+
+        $cart = $cartQuery->first();
+
+        if (!$cart) {
+            $cart = Cart::create([
+                'user_id'    => $authUser->role === 'client' ? $authUser->id : null,
+                'company_id' => $authUser->role !== 'client' ? $authUser->company_id : null,
+            ]);
+        }
+
+        $existingCompanyId = $cart->items()->exists() ? $cart->items()->first()->product->company_id : null;
+
+        $cartItemsData = [];
+
+        foreach ($request->products as $p) {
+            $product = Product::find($p['id']);
+
+            if (!$product) {
+                return response()->json([
+                    'message' => "Produto ID {$p['id']} não encontrado"
+                ], 404);
+            }
+
+            if ($product->stock_quantity < $p['quantity']) {
+                return response()->json([
+                    'message' => "Produto {$product->name} não possui estoque suficiente"
+                ], 422);
+            }
+
+            $cartItemsData[] = [
+                'product'  => $product,
+                'quantity' => $p['quantity'],
+                'price'    => $product->price
+            ];
+        }
+
+        if ($authUser->role === 'client' && $existingCompanyId) {
+            $newCompanyId = $cartItemsData[0]['product']->company_id;
+            if ($existingCompanyId !== $newCompanyId) {
+                $cart->items()->delete(); 
+            }
+        }
+
+        foreach ($cartItemsData as $item) {
+            $cartItem = $cart->items()->where('product_id', $item['product']->id)->first();
+
+            if ($cartItem) {
+                $newQty = $cartItem->quantity + $item['quantity'];
+                if ($item['product']->stock_quantity < $newQty) {
+                    return response()->json([
+                        'message' => "Produto {$item['product']->name} não possui estoque suficiente"
+                    ], 422);
+                }
+                $cartItem->update(['quantity' => $newQty]);
+            } else {
+                $cart->items()->create([
+                    'product_id' => $item['product']->id,
+                    'quantity'   => $item['quantity'],
+                    'price'      => $item['price']
+                ]);
+            }
+        }
+
+        return response()->json([
+            'message' => 'Produtos adicionados ao carrinho com sucesso',
+            'cart'    => $cart->load('items.product')
+        ]);
     }
 }
