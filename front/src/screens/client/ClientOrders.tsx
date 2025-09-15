@@ -72,6 +72,8 @@ export default function ClientOrders() {
                 return 'concluído';
             case 'canceled':
                 return 'cancelado';
+            case 'retirada':
+                return 'pronto para retirada';
             default:
                 return status;
         }

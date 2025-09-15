@@ -386,4 +386,42 @@ class ProductController extends Controller
             'orders' => $orders
         ]);
     }
+
+    public function getStoreOrders()
+    {
+        $authUser = auth()->user();
+
+        $storeId = $authUser->company_id;
+
+        $orders = Order::with(['items.product.images', 'user']) 
+            ->where('store_id', $storeId)
+            ->where('status', 'pending')
+            ->orderByDesc('id')
+            ->get();
+
+        return response()->json([
+            'orders' => $orders
+        ]);
+    }
+
+    public function updateStoreOrders(Request $request, Order $order)
+    {
+        $authUser = auth()->user();
+
+        if ($order->store_id !== $authUser->company_id) {
+            return response()->json(['message' => 'Acesso negado'], 403);
+        }
+
+        $request->validate([
+            'status' => 'required|string|in:pending,processing,ready_for_pickup,completed,canceled',
+        ]);
+
+        $order->status = $request->status;
+        $order->save();
+
+        return response()->json([
+            'message' => 'Status atualizado com sucesso',
+            'order' => $order,
+        ]);
+    }
 }

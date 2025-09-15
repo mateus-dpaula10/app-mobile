@@ -26,4 +26,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/cart/checkout', [ProductController::class, 'checkout'])->name('product.checkout');
 
     Route::get('/orders', [ProductController::class, 'getOrders'])->name('product.getOrders');
+    Route::get('/orders-store', [ProductController::class, 'getStoreOrders'])->name('product.getStoreOrders');
+    Route::patch('/orders-store/{order}/status', [ProductController::class, 'updateStoreOrders'])->name('product.updateStoreOrders');
 });
