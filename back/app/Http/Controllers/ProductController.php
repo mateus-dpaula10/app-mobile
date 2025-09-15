@@ -7,8 +7,10 @@ use Illuminate\Http\Request;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\Cart;
+use App\Models\Order;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
@@ -154,7 +156,7 @@ class ProductController extends Controller
             $cartQuery->where('company_id', $company_id);
         }
 
-        $cart = $cartQuery->with('items.product')->first();
+        $cart = $cartQuery->with('items.product.images')->first();
 
         if (!$cart) {
             return response()->json([
@@ -170,15 +172,24 @@ class ProductController extends Controller
         return response()->json([
             'message' => 'Carrinho recuperado com sucesso',
             'cart'    => [
-                'id'      => $cart->id,
-                'items'   => $cart->items->map(function ($item) {
+                'id'         => $cart->id,
+                'created_at' => $cart->created_at,
+                'items'      => $cart->items->map(function ($item) {
                     return [
-                        'id' => $item->id,
+                        'id'      => $item->id,
                         'product' => [
-                            'id' => $item->product->id,
-                            'name' => $item->product->name,
-                            'price' => $item->product->price,
-                            'stock' => $item->product->stock_quantity
+                            'id'             => $item->product->id,
+                            'name'           => $item->product->name,
+                            'description'    => $item->product->description,
+                            'price'          => $item->product->price,
+                            'stock_quantity' => $item->product->stock_quantity,
+                            'company_id'     => $item->product->company_id,
+                            'images'         => $item->product->images->map(function($img) {
+                                return [
+                                    'id' => $img->id,
+                                    'image_path' => $img->image_path
+                                ];
+                            })
                         ],
                         'quantity' => $item->quantity,
                         'price'    => $item->price,
@@ -306,5 +317,73 @@ class ProductController extends Controller
         }
 
         return response()->json(['message' => 'Produto removido do carrinho']);
+    }
+
+    public function checkout(Request $request)
+    {
+        $authUser = auth()->user();
+
+        $cart = Cart::with('items.product')->where('user_id', $authUser->id)->first();
+
+        if (!$cart || $cart->items->isEmpty()) {
+            return response()->json(['message' => 'Carrinho vazio'], 422);
+        }
+
+        foreach ($request->products as $product) {
+            $item = $cart->items->where('product_id', $product['id'])->first();
+            if ($item) {
+                $item->quantity = $product['quantity'];
+                $item->save();
+            }
+        }
+
+        foreach ($cart->items as $item) {
+            if ($item->product->stock_quantity < $item->quantity) {
+                return response()->json([
+                    'message' => "Produto {$item->product->name} não possui estoque suficiente"
+                ], 422);
+            }
+        }
+
+        foreach ($cart->items as $item) {
+            $item->product->decrement('stock_quantity', $item->quantity);
+        }   
+
+        $order = Order::create([
+            'user_id'  => $authUser->id,
+            'store_id' => $cart->items->first()->product->company_id,
+            'status'   => 'pending',
+            'code'     => strtoupper(Str::random(6)),
+            'total'    => $cart->items->sum(fn($i) => $i->quantity * $i->product->price)
+        ]);
+
+        foreach ($cart->items as $item) {
+            $order->items()->create([
+                'product_id' => $item->product->id,
+                'quantity'   => $item->quantity,
+                'price'      => $item->product->price
+            ]);
+        }
+
+        $cart->delete();
+
+        return response()->json([
+            'message' => 'Pedido criado com sucesso',
+            'order'   => $order->load('items.product')
+        ]);
+    }
+
+    public function getOrders()
+    {
+        $authUser = auth()->user();
+
+        $orders = Order::with(['items.product.images', 'store']) 
+            ->where('user_id', $authUser->id)
+            ->orderByDesc('id')
+            ->get();
+
+        return response()->json([
+            'orders' => $orders
+        ]);
     }
 }

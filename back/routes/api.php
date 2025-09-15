@@ -23,4 +23,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/cart', [ProductController::class, 'getCart'])->name('product.getCart');
     Route::post('/cart', [ProductController::class, 'addCart'])->name('product.addCart');
     Route::delete('/cart/items/{product}', [ProductController::class, 'removeItem'])->name('product.removeItem');
+    Route::post('/cart/checkout', [ProductController::class, 'checkout'])->name('product.checkout');
+
+    Route::get('/orders', [ProductController::class, 'getOrders'])->name('product.getOrders');
 });

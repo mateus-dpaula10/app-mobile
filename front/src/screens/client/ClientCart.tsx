@@ -37,8 +37,6 @@ export default function ClientCart() {
             const response = await api.get('/cart', {
                 headers: { Authorization: `Bearer ${token}` }
             });
-
-            console.log(response);
             
             if (response.data.cart) {
                 setCart(response.data.cart.items.map((item: any) => ({
@@ -125,7 +123,7 @@ export default function ClientCart() {
                             source={{ uri: `http://localhost:8000/storage/${product.images[0].image_path}` }}
                             alt={product.name}
                             width={100}
-                            height={100}
+                            height="100%"
                             resizeMode="cover"
                         />
                     )}
@@ -178,7 +176,10 @@ export default function ClientCart() {
                         <FlatList
                             data={cart}
                             keyExtractor={item => item.product.id.toString()}
-                            renderItem={({ item }) => <CartItemCard item={item} />}
+                            renderItem={({ item }) => {
+                                const currentItem = cart.find(c => c.product.id === item.product.id) || item;
+                                return <CartItemCard item={currentItem} />;
+                            }}
                         />
                         <Box p={4} borderTopWidth={1} borderColor="gray.200">
                             <HStack justifyContent="space-between" mb={2}>
