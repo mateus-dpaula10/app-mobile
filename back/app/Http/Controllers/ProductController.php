@@ -144,6 +144,52 @@ class ProductController extends Controller
         return response()->json(['message' => 'Produto removido']);
     }
 
+    public function getCart(Request $request) {
+        $authUser = auth()->user();
+
+        $cartQuery = Cart::query();
+        if ($authUser->role === 'client') {
+            $cartQuery->where('user_id', $authUser->id);
+        } else {
+            $cartQuery->where('company_id', $company_id);
+        }
+
+        $cart = $cartQuery->with('items.product')->first();
+
+        if (!$cart) {
+            return response()->json([
+                'message' => 'Carrinho vazio',
+                'cart'    => null
+            ]);
+        }
+
+        $total = $cart->items->reduce(function ($sum, $item) {
+            return $sum + ($item->quantity * $item->price);
+        }, 0);
+
+        return response()->json([
+            'message' => 'Carrinho recuperado com sucesso',
+            'cart'    => [
+                'id'      => $cart->id,
+                'items'   => $cart->items->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'product' => [
+                            'id' => $item->product->id,
+                            'name' => $item->product->name,
+                            'price' => $item->product->price,
+                            'stock' => $item->product->stock_quantity
+                        ],
+                        'quantity' => $item->quantity,
+                        'price'    => $item->price,
+                        'subtotal' => $item->quantity * $item->price
+                    ];
+                }),
+                'total' => $total
+            ]
+        ]);
+    }
+
     public function addCart(Request $request)
     {
         $authUser = auth()->user();
@@ -227,5 +273,38 @@ class ProductController extends Controller
             'message' => 'Produtos adicionados ao carrinho com sucesso',
             'cart'    => $cart->load('items.product')
         ]);
+    }
+
+    public function removeItem(Product $product)
+    {
+        $authUser = auth()->user();
+
+        $cartQuery = Cart::query();
+        if ($authUser->role === 'client') {
+            $cartQuery->where('user_id', $authUser->id);
+        } else {
+            $cartQuery->where('company_id', $authUser->company_id);
+        }
+
+        $cart = $cartQuery->first();
+
+        if (!$cart) {
+            return response()->json(['message' => 'Carrinho não encontrado'], 404);
+        }
+
+        $cartItem = $cart->items()->where('product_id', $product->id)->first();
+
+        if (!$cartItem) {
+            return response()->json(['message' => 'Produto não encontrado no carrinho'], 404);
+        }
+
+        $cartItem->delete();
+
+        if ($cart->items()->count() === 0) {
+            $cart->delete();
+            return response()->json(['message' => 'Produto removido e carrinho excluído']);
+        }
+
+        return response()->json(['message' => 'Produto removido do carrinho']);
     }
 }

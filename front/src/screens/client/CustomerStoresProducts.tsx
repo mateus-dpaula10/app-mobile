@@ -97,7 +97,7 @@ export default function CustomerStoresProducts({ route }: CustomerStoresProducts
             const response = await api.post(
                 '/cart', 
                 { products: cart.map(c => ({ id: c.product.id, quantity: c.quantity })) },
-                {   headers: { Authorization: `Bearer ${token}` } }
+                { headers: { Authorization: `Bearer ${token}` } }
             );
 
             toast.show({ title: 'Produtos adicionados ao carrinho', duration: 3000 });
@@ -222,7 +222,11 @@ export default function CustomerStoresProducts({ route }: CustomerStoresProducts
 
                 {cart.length > 0 && (
                     <Button mt={4} onPress={addToCart}>
-                        Adicionar {cart.reduce((sum, c) => sum + c.quantity, 0)} produto(s) ao carrinho
+                        <HStack space={1} alignItems="center">
+                            <Text color="white">Adicionar</Text>
+                            <Text color="white">{cart.reduce((sum, c) => sum + c.quantity, 0)}</Text>
+                            <Text color="white">produto(s) ao carrinho</Text>
+                        </HStack>
                     </Button>
                 )}
             </VStack>      
