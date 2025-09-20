@@ -20,6 +20,7 @@ import RegisterScreen from '../screens/RegisterScreen';
 import CustomerStores from '../screens/client/CustomerStores';
 import CustomerStoresProducts from '../screens/client/CustomerStoresProducts';
 import ClientCart from '../screens/client/ClientCart';
+import DeliveryOrders from '../screens/delivery/DeliveryOrders';
 
 type ProductImage = {
   id: number;
@@ -62,6 +63,7 @@ export type RootStackParamList = {
     StoreOrders: undefined;
     DeliveryTasks: undefined;
     DeliveryProfile: undefined;
+    DeliveryOrders: undefined;
     AdminDashboard: undefined;
     ManageUsers: undefined;
 };
@@ -113,6 +115,7 @@ export default function AppRoutes() {
             {/* delivery */}
             <Stack.Screen name="DeliveryTasks" component={DeliveryTasks} />
             <Stack.Screen name="DeliveryProfile" component={DeliveryProfile} />
+            <Stack.Screen name="DeliveryOrders" component={DeliveryOrders} />
 
             {/* admin */}
             <Stack.Screen name="AdminDashboard" component={AdminDashboard} />

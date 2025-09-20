@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\DriverOrderController;
 
 Route::post('/login', [AuthController::class, 'login'])->name('auth.login');
 Route::post('/register', [AuthController::class, 'register'])->name('auth.register');
@@ -28,4 +29,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/orders', [ProductController::class, 'getOrders'])->name('product.getOrders');
     Route::get('/orders-store', [ProductController::class, 'getStoreOrders'])->name('product.getStoreOrders');
     Route::patch('/orders-store/{order}/status', [ProductController::class, 'updateStoreOrders'])->name('product.updateStoreOrders');
+
+    Route::get('/orders-driver', [DriverOrderController::class, 'index'])->name('driver.order.index');
+    Route::patch('/orders-driver/{order}/accept', [DriverOrderController::class, 'acceptOrder'])->name('driver.order.acceptOrder');
+    Route::patch('/orders-driver/{order}/status', [DriverOrderController::class, 'updateStatus'])->name('driver.order.updateStatus');
 });

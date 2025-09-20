@@ -12,6 +12,7 @@ export const sidebarOptions: Record<string, { label: string; screen: string; ico
         { label: 'Pedidos Recebidos', screen: 'StoreOrders', icon: Truck }
     ],
     delivery: [
+        { label: 'Pedidos', screen: 'DeliveryOrders', icon: Truck },
         { label: 'Entregas', screen: 'DeliveryTasks', icon: Truck },
         { label: 'Perfil', screen: 'DeliveryProfile', icon: User }
     ],
