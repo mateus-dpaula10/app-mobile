@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Button, Image, Input, Text, useToast, VStack } from 'native-base';
+import { Box, Button, Image, Input, Select, Text, useToast, VStack } from 'native-base';
 import LayoutWithSidebar from '../../components/LayoutWithSidebar';
 import api from '../../services/api';
 import { Product } from '../../type/Product';
@@ -33,6 +33,16 @@ export default function StoreProducts() {
     const [images, setImages] = useState<ImageFile[]>([]);
     const [existingImages, setExistingImages] = useState<string[]>([]);
     const toast = useToast();
+    const [category, setCategory] = useState('');
+    const [categories, setCategories] = useState<string[]>([]);
+    const [status, setStatus] = useState<'ativo' | 'em_falta' | 'oculto'>('ativo');
+    const [freeShipping, setFreeShipping] = useState(false);
+    const [firstPurchaseDiscountStore, setFirstPurchaseDiscountStore] = useState(false);
+    const [firstPurchaseDiscountApp, setFirstPurchaseDiscountApp] = useState(false);
+    const [weighable, setWeighable] = useState(false);
+    const [variations, setVariations] = useState<{ type: string; value: string }[]>([]);
+    const [variationType, setVariationType] = useState('');
+    const [variationValue, setVariationValue] = useState('');
 
     const pickImage = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
@@ -91,17 +101,22 @@ export default function StoreProducts() {
     const [saving, setSaving] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
 
-    const loadProducts = async () => {
-        setLoading(true);
-        try {
-            const res = await api.get('/products');
-            setProducts(res.data);
-        } catch (err) {
-            console.error('Erro ao carregar produtos', err);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const resetForm = () => {
+        setName('');
+        setDescription('');
+        setPrice('');
+        setStock('');
+        setCategory('');
+        setStatus('ativo');
+        setFreeShipping(false);
+        setFirstPurchaseDiscountStore(false);
+        setFirstPurchaseDiscountApp(false);
+        setWeighable(false);
+        setVariations([]);
+        setImages([]);
+        setExistingImages([]);
+        setEditingId(null);
+    }
 
     const handleAddProduct = async () => {
         const token = await AsyncStorage.getItem('@token');
@@ -115,6 +130,17 @@ export default function StoreProducts() {
         formData.append('description', description);
         formData.append('price', price);
         formData.append('stock_quantity', stock);
+        formData.append('category', category);
+        formData.append('status', status);
+        formData.append('free_shipping', freeShipping ? '1' : '0');
+        formData.append('first_purchase_discount_store', firstPurchaseDiscountStore ? '1' : '0');
+        formData.append('first_purchase_discount_app', firstPurchaseDiscountApp ? '1' : '0');
+        formData.append('weighable', weighable ? '1' : '0');
+
+        variations.forEach((v, index) => {
+            formData.append(`variations[${index}][type]`, v.type);
+            formData.append(`variations[${index}][value]`, v.value);
+        });
 
         if (existingImages.length > 0) {
             existingImages.forEach(path => {
@@ -171,13 +197,7 @@ export default function StoreProducts() {
                 });
             }
 
-            setName('');
-            setDescription('');
-            setPrice('');
-            setStock('');
-            setImages([]);
-            setExistingImages([]);
-            setEditingId(null);
+            resetForm();
         } catch (err: any) {
             console.error(err);
             
@@ -209,9 +229,14 @@ export default function StoreProducts() {
         setDescription(product.description);
         setPrice(String(product.price));
         setStock(String(product.stock_quantity));
-
+        setCategory(product.category || '');
+        setStatus(product.status as any || 'ativo');
+        setFreeShipping(!!product.free_shipping);
+        setFirstPurchaseDiscountStore(!!product.first_purchase_discount_store);
+        setFirstPurchaseDiscountApp(!!product.first_purchase_discount_app);
+        setWeighable(!!product.weighable);
+        setVariations(product.variations || []);
         setExistingImages(product.images.map(img => img.image_path));
-
         setImages([]);
     };
 
@@ -239,7 +264,33 @@ export default function StoreProducts() {
     };
 
     useEffect(() => {
+        const loadProducts = async () => {
+            setLoading(true);
+            try {
+                const res = await api.get('/products');
+                setProducts(res.data);
+            } catch (err) {
+                console.error('Erro ao carregar produtos', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        const loadCategories = async () => {
+            const token = await AsyncStorage.getItem('@token');
+            if (!token) return;
+            try {
+                const res = await api.get('/categories', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setCategories(res.data.map((c: any) => c.name));
+            } catch (err) {
+                console.error('Erro ao carregar categorias', err);
+            }
+        };
+
         loadProducts();
+        loadCategories();
     }, []);
 
     const getImageUrl = (path: string) => {
@@ -260,6 +311,118 @@ export default function StoreProducts() {
                     onChangeText={setName}
                     mt={2}
                 />
+                <Text mt={2}>Categoria</Text>
+                <Select
+                    selectedValue={category}
+                    minWidth={200}
+                    placeholder="Selecione ou digite a categoria"
+                    mt={1}
+                    onValueChange={value => setCategory(value)}
+                >
+                    {categories.map((cat, i) => (
+                        <Select.Item key={i} label={cat} value={cat} />
+                    ))}
+                </Select>
+                <Input
+                    placeholder="Ou digite nova categoria"
+                    value={category}
+                    onChangeText={setCategory}
+                    mt={1}
+                />
+                <Text mt={2}>Status</Text>
+                <Box flexDirection="row">
+                    {['ativo', 'em_falta', 'oculto'].map((opt) => (
+                        <Button
+                            key={opt}
+                            size="sm"
+                            variant={status === opt ? "solid" : "outline"}
+                            mr={2}
+                            onPress={() => setStatus(opt as any)}
+                        >
+                            {opt}
+                        </Button>
+                    ))}
+                </Box>
+                <Box flexDirection="row" mt={2}>
+                    <Button
+                        size="sm"
+                        variant={freeShipping ? "solid" : "outline"}
+                        onPress={() => setFreeShipping(!freeShipping)}
+                        mr={2}
+                    >
+                        Frete grátis
+                    </Button>
+
+                    <Button
+                        size="sm"
+                        variant={firstPurchaseDiscountStore ? "solid" : "outline"}
+                        onPress={() => setFirstPurchaseDiscountStore(!firstPurchaseDiscountStore)}
+                        mr={2}
+                    >
+                        Desc. 1ª compra (loja)
+                    </Button>
+
+                    <Button
+                        size="sm"
+                        variant={firstPurchaseDiscountApp ? "solid" : "outline"}
+                        onPress={() => setFirstPurchaseDiscountApp(!firstPurchaseDiscountApp)}
+                    >
+                        Desc. 1ª compra (app)
+                    </Button>
+                </Box>
+                <Button
+                    size="sm"
+                    mt={2}
+                    variant={weighable ? "solid" : "outline"}
+                    onPress={() => setWeighable(!weighable)}
+                    >
+                    Pesável
+                </Button>
+                <Text mt={2}>Variações</Text>
+                <Box flexDirection="row" mt={1}>
+                    <Input
+                        flex={1}
+                        placeholder="Tipo (ex: Tamanho, Sabor)"
+                        value={variationType}
+                        onChangeText={setVariationType}
+                        mr={2}
+                    />
+                    <Input
+                        flex={1}
+                        placeholder="Valor (ex: P, M, G | Chocolate)"
+                        value={variationValue}
+                        onChangeText={setVariationValue}
+                        mr={2}
+                    />
+                    <Button
+                        onPress={() => {
+                            if (variationType && variationValue) {
+                                setVariations([...variations, { type: variationType, value: variationValue }]);
+                                setVariationType('');
+                                setVariationValue('');
+                            }
+                        }}
+                    >
+                        +
+                    </Button>
+                </Box>
+                    {variations.length > 0 && (
+                        <VStack mt={2}>
+                            {variations.map((v, i) => (
+                                <Box key={i} flexDirection="row" alignItems="center">
+                                    <Text>{v.type}: {v.value}</Text>
+                                    <Button
+                                        size="xs"
+                                        ml={2}
+                                        colorScheme="red"
+                                        onPress={() => setVariations(variations.filter((_, idx) => idx !== i))}
+                                    >
+                                        X
+                                    </Button>
+                                </Box>
+                            ))}
+                        </VStack>
+                    )}
                 <Input
                     placeholder="Descrição"
                     multiline
@@ -368,6 +531,15 @@ export default function StoreProducts() {
                                 <Text fontSize="sm">{item.description}</Text>
                                 <Text>Preço: R$ {Number(item.price).toFixed(2).replace('.', ',')}</Text>
                                 <Text>Estoque: {item.stock_quantity}</Text>
+                                <Text>Categoria: {item.category}</Text>
+                                <Text>Status: {item.status}</Text>
+                                {item.free_shipping && <Text>🚚 Frete grátis</Text>}
+                                {item.first_purchase_discount_store && <Text>🎉 Desc. 1ª compra (loja)</Text>}
+                                {item.first_purchase_discount_app && <Text>📱 Desc. 1ª compra (app)</Text>}
+                                {item.weighable && <Text>⚖️ Pesável</Text>}
+                                {item.variations && item.variations.length > 0 && (
+                                <Text>Variações: {item.variations.map(v => `${v.type}: ${v.value}`).join(', ')}</Text>
+                                )}
 
                                 <Box flexDirection="row" mt={2}>
                                     <Button

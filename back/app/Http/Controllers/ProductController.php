@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\Cart;
 use App\Models\Order;
+use App\Models\Category;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
@@ -19,6 +20,17 @@ class ProductController extends Controller
         $products = Product::where('company_id', auth()->user()->company_id)->with('images')->get();
         
         return response()->json($products);
+    }
+
+    public function getCategories()
+    {
+        $authUser = auth()->user();
+
+        $categories = Category::where('company_id', $authUser->company_id)
+            ->orderBy('name')
+            ->get();
+
+        return response()->json($categories);
     }
 
     public function store(Request $request) 
@@ -38,10 +50,19 @@ class ProductController extends Controller
                     return $query->where('company_id', $authUser->company_id);
                 })
             ],
-            'description'             => 'nullable|string',
-            'price'                   => 'required|numeric|min:0',
-            'stock_quantity'          => 'required|integer|min:0',
-            'images.*'                => 'nullable|image|mimes:jpg,jpeg,png|max:2048'
+            'description'                   => 'nullable|string',
+            'price'                         => 'required|numeric|min:0',
+            'stock_quantity'                => 'required|integer|min:0',
+            'category'                      => 'nullable|string|max:255',
+            'status'                        => 'required|in:ativo,em_falta,oculto',
+            'free_shipping'                 => 'boolean',
+            'first_purchase_discount_store' => 'boolean',
+            'first_purchase_discount_app'   => 'boolean',
+            'weighable'                     => 'boolean',
+            'variations'                    => 'nullable|array',
+            'variations.*.type'             => 'required_with:variations|string|max:255',
+            'variations.*.value'            => 'required_with:variations|string|max:255',
+            'images.*'                      => 'nullable|image|mimes:jpg,jpeg,png|max:2048'
         ], [
             'name.required'           => 'O campo nome é obrigatório.',
             'name.unique'             => 'Já existe um produto com este nome.',
@@ -56,12 +77,30 @@ class ProductController extends Controller
             'images.*.max'            => 'Cada imagem não pode ultrapassar 2MB.'
         ]);
 
+        $categoryId = null;
+        if ($request->filled('category')) {
+            $category = Category::firstOrCreate(
+                [
+                    'name'       => $request->category,
+                    'company_id' => $authUser->company_id,
+                ]
+            );
+            $categoryId = $category->id;
+        }
+
         $product = Product::create([
-            'company_id'     => auth()->user()->company_id,
-            'name'           => $request->name,
-            'description'    => $request->description,
-            'price'          => $request->price,
-            'stock_quantity' => $request->stock_quantity
+            'company_id'                    => $authUser->company_id,
+            'name'                          => $request->name,
+            'description'                   => $request->description,
+            'price'                         => $request->price,
+            'stock_quantity'                => $request->stock_quantity,
+            'status'                        => $request->status,
+            'free_shipping'                 => $request->free_shipping ?? false,
+            'first_purchase_discount_store' => $request->first_purchase_discount_store ?? false,
+            'first_purchase_discount_app'   => $request->first_purchase_discount_app ?? false,
+            'weighable'                     => $request->weighable ?? false,
+            'variations'                    => $request->variations,
+            'category_id'                   => $categoryId
         ]);
 
         if ($request->hasFile('images')) {
@@ -93,11 +132,20 @@ class ProductController extends Controller
                     return $query->where('company_id', $authUser->company_id);
                 }),
             ],
-            'description'     => 'nullable|string',
-            'price'           => 'required|numeric|min:0',
-            'stock_quantity'  => 'required|integer|min:0',
-            'images.*'        => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-            'existing_images' => 'nullable|array' 
+            'description'                   => 'nullable|string',
+            'price'                         => 'required|numeric|min:0',
+            'stock_quantity'                => 'required|integer|min:0',
+            'category'                      => 'nullable|string|max:255',
+            'status'                        => 'required|in:ativo,em_falta,oculto',
+            'free_shipping'                 => 'boolean',
+            'first_purchase_discount_store' => 'boolean',
+            'first_purchase_discount_app'   => 'boolean',
+            'weighable'                     => 'boolean',
+            'variations'                    => 'nullable|array',
+            'variations.*.type'             => 'required_with:variations|string|max:255',
+            'variations.*.value'            => 'required_with:variations|string|max:255',
+            'images.*'                      => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'existing_images'               => 'nullable|array'
         ], [
             'name.required'            => 'O campo nome é obrigatório.',
             'name.unique'              => 'Já existe um produto com este nome.',
@@ -114,14 +162,32 @@ class ProductController extends Controller
             'existing_images.*.string' => 'Cada imagem existente deve ser identificada por um caminho válido.'
         ]);
 
-        $product->update($request->only('name', 'description', 'price', 'stock_quantity'));
+        $categoryId = $product->category_id;
+        if ($request->filled('category')) {
+            $category = Category::firstOrCreate(
+                ['name' => $request->category, 'company_id' => $authUser->company_id]
+            );
+            $categoryId = $category->id;
+        }
+
+        $product->update([
+            'name'                          => $request->name,
+            'description'                   => $request->description,
+            'price'                         => $request->price,
+            'stock_quantity'                => $request->stock_quantity,
+            'status'                        => $request->status,
+            'free_shipping'                 => $request->boolean('free_shipping'),
+            'first_purchase_discount_store' => $request->boolean('first_purchase_discount_store'),
+            'first_purchase_discount_app'   => $request->boolean('first_purchase_discount_app'),
+            'weighable'                     => $request->boolean('weighable'),
+            'variations'                    => $request->variations, 
+            'category_id'                   => $categoryId
+        ]);
 
         $existingImages = $request->input('existing_images', []);
-
         $imagesToDelete = $product->images()
             ->whereNotIn('image_path', $existingImages)
             ->get();
-
         foreach ($imagesToDelete as $img) {
             Storage::disk('public')->delete($img->image_path);
             $img->delete();
