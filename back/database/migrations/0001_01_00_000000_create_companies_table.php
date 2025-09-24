@@ -20,6 +20,13 @@ return new class extends Migration
             $table->string('address')->nullable();
             $table->string('plan')->nullable();
             $table->boolean('active')->default(true);
+            $table->string('email')->nullable();
+            $table->string('category')->nullable();
+            $table->enum('status', ['active', 'suspended'])->default('active');
+            $table->string('logo')->nullable();
+            $table->decimal('delivery_fee', 8, 2)->nullable();
+            $table->integer('delivery_radius')->nullable();
+            $table->json('opening_hours')->nullable();
             $table->timestamps();
         });
     }

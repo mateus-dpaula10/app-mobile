@@ -9,7 +9,8 @@ export const sidebarOptions: Record<string, { label: string; screen: string; ico
     ],
     store: [
         { label: 'Produtos', screen: 'StoreProducts', icon: ShoppingCart },
-        { label: 'Pedidos Recebidos', screen: 'StoreOrders', icon: Truck }
+        { label: 'Pedidos Recebidos', screen: 'StoreOrders', icon: Truck },
+        { label: 'Perfil', screen: 'StoreProfile', icon: User }
     ],
     delivery: [
         { label: 'Pedidos', screen: 'DeliveryOrders', icon: Truck },

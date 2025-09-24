@@ -21,6 +21,7 @@ import CustomerStores from '../screens/client/CustomerStores';
 import CustomerStoresProducts from '../screens/client/CustomerStoresProducts';
 import ClientCart from '../screens/client/ClientCart';
 import DeliveryOrders from '../screens/delivery/DeliveryOrders';
+import StoreProfile from '../screens/store/StoreProfile';
 
 type ProductImage = {
   id: number;
@@ -61,6 +62,7 @@ export type RootStackParamList = {
     ClientProfile: undefined;
     StoreProducts: undefined;
     StoreOrders: undefined;
+    StoreProfile: undefined;
     DeliveryTasks: undefined;
     DeliveryProfile: undefined;
     DeliveryOrders: undefined;
@@ -111,6 +113,7 @@ export default function AppRoutes() {
             {/* store */}
             <Stack.Screen name="StoreProducts" component={StoreProducts} />
             <Stack.Screen name="StoreOrders" component={StoreOrders} />
+            <Stack.Screen name="StoreProfile" component={StoreProfile} />
 
             {/* delivery */}
             <Stack.Screen name="DeliveryTasks" component={DeliveryTasks} />

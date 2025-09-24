@@ -16,6 +16,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/companies/{company}', [CompanyController::class, 'destroy'])->name('company.destroy');
     Route::get('/companies-with-products', [CompanyController::class, 'companies'])->name('company.companies');
     
+    Route::get('/companies/me', [CompanyController::class, 'myCompany'])->name('company.myCompany');
+    Route::post('/companies/addInfo', [CompanyController::class, 'addInfo'])->name('company.addInfo');
+    
     Route::get('/categories', [ProductController::class, 'getCategories'])->name('product.getCategories');
     Route::get('/products', [ProductController::class, 'index'])->name('product.index');
     Route::post('/products', [ProductController::class, 'store'])->name('product.store');

@@ -56,6 +56,56 @@ class CompanyController extends Controller
         return response()->json(['company' => $company, 'admin' => $admin], 201);
     }
 
+    public function myCompany()
+    {
+        $authUser = auth()->user();
+
+        if (!$authUser->company) {
+            return response()->json(['message' => 'Nenhuma empresa associada'], 404);
+        }
+
+        return response()->json($authUser->company);
+    }
+
+    public function addInfo(Request $request)
+    {
+        $authUser = auth()->user();
+
+        $request->validate([
+            'email'           => 'nullable|email',
+            'category'        => 'nullable|string|max:255',
+            'status'          => 'nullable|in:active,suspended,pending',
+            'logo'            => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'delivery_fee'    => 'nullable|numeric|min:0',
+            'delivery_radius' => 'nullable|integer|min:1',
+            'opening_hours'   => 'nullable|array'
+        ]);
+
+        $company = $authUser->company;
+
+        if ($request->hasFile('logo')) {
+            $path = $request->file('logo')->store('logos', 'public');
+            $company->logo = $path;
+        }
+
+        $company->email = $request->email ?? $company->email;
+        $company->category = $request->category ?? $company->category;
+        $company->status = $request->status ?? $company->status;
+        $company->delivery_fee = $request->delivery_fee ?? $company->delivery_fee;
+        $company->delivery_radius = $request->delivery_radius ?? $company->delivery_radius;
+
+        if ($request->opening_hours) {
+            $company->opening_hours = json_encode($request->opening_hours);
+        }
+
+        $company->save();
+
+        return response()->json([
+            'message' => 'Informações adicionais salvas com sucesso.',
+            'company' => $company
+        ], 200);
+    }
+
     public function update(Request $request, Company $company)
     {
         $request->validate([

@@ -13,7 +13,14 @@ class Company extends Model
         'phone',
         'address',
         'plan',
-        'active'
+        'active',
+        'email',
+        'category',
+        'status',
+        'logo',
+        'delivery_fee',
+        'delivery_radius',
+        'opening_hours'
     ];
 
     public function admin()
