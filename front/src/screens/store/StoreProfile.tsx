@@ -21,7 +21,8 @@ type ImageFile = {
     uri: string;
     name: string;
     type: string;
-    file?: File
+    file?: File,
+    isNew?: boolean
 };
 
 export default function StoreProfile() {
@@ -69,7 +70,7 @@ export default function StoreProfile() {
                 setPhone(company.phone || '');
                 setEmail(company.email || '');
                 setAddress(company.address || '');
-                if (company.category && categories.includes(company.categories)) {
+                if (company.category && categories.includes(company.category)) {
                     setCategory(company.category);
                 } else {
                     setCategory('');
@@ -83,6 +84,7 @@ export default function StoreProfile() {
                         uri: `http://localhost:8000/storage/${company.logo}`,
                         name: 'logo.jpg',
                         type: 'image/jpeg',
+                        isNew: false
                     });
                 }
             } catch (err) {
@@ -123,6 +125,7 @@ export default function StoreProfile() {
                     name: file.name,
                     type: file.type,
                     file,
+                    isNew: true
                 });
             } else {
                 if (Platform.OS !== 'web' && asset.uri.startsWith('content://')) {
@@ -159,12 +162,12 @@ export default function StoreProfile() {
         formData.append('delivery_fee', deliveryFee);
         formData.append('delivery_radius', deliveryRadius);
 
-        if (logo && (logo.file || logo.uri)) {
+        if (logo?.isNew) {
             if (Platform.OS === 'web' && logo.file) {
                 formData.append('logo', logo.file, logo.name);
             } else {
                 formData.append('logo', {
-                    uri: logo.uri,
+                    uri: Platform.OS === 'android' ? logo.uri : logo.uri.replace('file://', ''),
                     name: logo.name,
                     type: logo.type,
                 } as any);
@@ -185,15 +188,33 @@ export default function StoreProfile() {
         }
     }
 
+    function formatPhone(value: string) {
+        const digits = value.replace(/\D/g, ""); 
+
+        if (digits.length <= 10) {
+            return digits.replace(/(\d{0,2})(\d{0,4})(\d{0,4})/, (match, ddd, part1, part2) => {
+            if (!part1) return ddd;
+            if (!part2) return `(${ddd}) ${part1}`;
+            return `(${ddd}) ${part1}-${part2}`;
+            });
+        } else {
+            return digits.replace(/(\d{0,2})(\d{0,5})(\d{0,4})/, (match, ddd, part1, part2) => {
+            if (!part1) return ddd;
+            if (!part2) return `(${ddd}) ${part1}`;
+            return `(${ddd}) ${part1}-${part2}`;
+            });
+        }
+    }
+
     return (
         <LayoutWithSidebar>
             <VStack mt={10} space={3}>
                 <Text bold fontSize="lg">Perfil da Loja</Text>
 
                 <Input placeholder="Nome da loja" value={name} onChangeText={setName} />
-                <Input placeholder="CNPJ" value={cnpj} onChangeText={setCnpj} />
-                <Input placeholder="Telefone" value={phone} onChangeText={setPhone} />
-                <Input placeholder="E-mail" value={phone} onChangeText={setPhone} />
+                <Input placeholder="CNPJ" value={cnpj} isDisabled />
+                <Input placeholder="Telefone" value={formatPhone(phone)} onChangeText={(text) => setPhone(text.replace(/\D/g, ""))} />
+                <Input placeholder="E-mail" value={email} onChangeText={setEmail} />
                 <Input placeholder="Endereço" value={address} onChangeText={setAddress} />
                 <Select
                     selectedValue={category}

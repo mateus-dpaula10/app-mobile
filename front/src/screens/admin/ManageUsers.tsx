@@ -208,6 +208,24 @@ export default function ManageUsers() {
         </Box>
     );
 
+    function formatPhone(value: string) {
+        const digits = value.replace(/\D/g, ""); 
+
+        if (digits.length <= 10) {
+            return digits.replace(/(\d{0,2})(\d{0,4})(\d{0,4})/, (match, ddd, part1, part2) => {
+            if (!part1) return ddd;
+            if (!part2) return `(${ddd}) ${part1}`;
+            return `(${ddd}) ${part1}-${part2}`;
+            });
+        } else {
+            return digits.replace(/(\d{0,2})(\d{0,5})(\d{0,4})/, (match, ddd, part1, part2) => {
+            if (!part1) return ddd;
+            if (!part2) return `(${ddd}) ${part1}`;
+            return `(${ddd}) ${part1}-${part2}`;
+            });
+        }
+    }
+
     return (
         <LayoutWithSidebar>
             <VStack mt={10}>
@@ -229,9 +247,9 @@ export default function ManageUsers() {
                 />    
                 <Input
                     placeholder="Telefone"
-                    value={company.phone}
+                    value={formatPhone(company.phone)}
                     mt={1}
-                    onChangeText={v => setCompany(c => ({ ...c, phone: v }))}
+                    onChangeText={v => setCompany(c => ({ ...c, phone: v.replace(/\D/g, "") }))}
                 />
                 <Input
                     placeholder="Endereço"

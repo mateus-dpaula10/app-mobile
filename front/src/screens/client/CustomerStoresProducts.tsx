@@ -33,6 +33,7 @@ type Store = {
     address: string;
     plan: string;
     active: boolean;
+    category: string;
     products: Product[];
 }
 

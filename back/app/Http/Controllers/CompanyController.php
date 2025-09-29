@@ -71,6 +71,10 @@ class CompanyController extends Controller
     {
         $authUser = auth()->user();
 
+        $request->merge([
+            'delivery_fee' => str_replace(',', '.', $request->delivery_fee)
+        ]);
+
         $request->validate([
             'email'           => 'nullable|email',
             'category'        => 'nullable|string|max:255',

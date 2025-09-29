@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Box, Button, Input, Text, useToast, VStack } from 'native-base';
 import LayoutWithSidebar from '../../components/LayoutWithSidebar';
 import api from '../../services/api';
-import { FlatList } from 'react-native';
+import { FlatList, Image } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 type ProductImage = {
@@ -30,6 +30,8 @@ type Store = {
     address: string;
     plan: string;
     active: boolean;
+    category: string;
+    logo?: string;
     products: Product[];
 }
 
@@ -45,11 +47,68 @@ export default function CustomerStores({ navigation }: Props) {
     const [stores, setStores] = useState<Store[]>([]);
     const [search, setSearch] = useState('');
     const toast = useToast();
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+    const categories = [
+        { 
+            name: 'Supermercado', 
+            image: 'http://localhost:8000/storage/categories/supermercado.jpg'
+        },
+        { 
+            name: 'Padaria', 
+            image: 'http://localhost:8000/storage/categories/padaria.jpg'
+        },
+        { 
+            name: 'Restaurante', 
+            image: 'http://localhost:8000/storage/categories/restaurante.jpg'
+        },
+        { 
+            name: 'Bebidas', 
+            image: 'http://localhost:8000/storage/categories/bebidas.jpg'
+        },
+        { 
+            name: 'Doces e Sobremesas', 
+            image: 'http://localhost:8000/storage/categories/sobremesas.jpg'
+        },
+        { 
+            name: 'Farmácia', 
+            image: 'http://localhost:8000/storage/categories/farmacia.jpg'
+        },
+        { 
+            name: 'Pet Shop', 
+            image: 'http://localhost:8000/storage/categories/petshop.jpg'
+        },
+        { 
+            name: 'Moda e Acessórios', 
+            image: 'http://localhost:8000/storage/categories/moda.jpg'
+        },
+        { 
+            name: 'Eletrônicos', 
+            image: 'http://localhost:8000/storage/categories/eletronicos.jpg'
+        },
+        { 
+            name: 'Casa e Decoração', 
+            image: 'http://localhost:8000/storage/categories/casa_decoracao.jpg'
+        },
+        { 
+            name: 'Saúde e Beleza', 
+            image: 'http://localhost:8000/storage/categories/beleza.jpg'
+        },
+        { 
+            name: 'Esporte e Lazer', 
+            image: 'http://localhost:8000/storage/categories/esportes.jpg'
+        },
+        { 
+            name: 'Livraria', 
+            image: 'http://localhost:8000/storage/categories/livraria.jpg'
+        },
+    ];
 
     useEffect(() => {
         const fetchStores = async () => {
             try {
                 const response = await api.get('/companies-with-products');
+                console.log(response.data);
                 setStores(response.data);
             } catch (err) {
                 console.error(err);
@@ -67,8 +126,8 @@ export default function CustomerStores({ navigation }: Props) {
     }, []);
 
     const filteredStores = stores
-        .filter(store => store.final_name.toLowerCase().includes(search.toLowerCase())
-    );
+        .filter(store => store.final_name.toLowerCase().includes(search.toLowerCase()))
+        .filter(store => !selectedCategory || store.category === selectedCategory);
 
     function formatPhone(phone: string) {
         if (!phone) return '';
@@ -84,23 +143,32 @@ export default function CustomerStores({ navigation }: Props) {
     const renderStoreCard = (store: Store) => (
         <Box
             key={store.id}
-            borderWidth={1}
-            borderColor="gray.200"
+            flex={1}
+            margin={2}
             borderRadius="lg"
             overflow="hidden"
             bg="white"
             shadow={2}
-            m={2}
-            flex={1}
         >
-            <VStack p={3} space={2}>
-                <Text bold fontSize="lg">{store.final_name}</Text>
+            <VStack p={3} space={2} alignItems="center">
+                {store.logo && (
+                    <Image
+                        source={{ uri: `http://localhost:8000/storage/${store.logo.replace(/^\/+/, '')}` }}
+                        style={{ width: 80, height: 80, borderRadius: 10 }}
+                        resizeMode="cover"
+                    />
+                )}
+
+                <Text bold fontSize="lg" textAlign="center">{store.final_name}</Text>
+
                 {store.phone && (
                     <Text fontSize="sm" color="gray.600">Telefone: {formatPhone(store.phone)}</Text>
                 )}
+
                 {store.address && ((
                     <Text fontSize="sm" color="gray.600">Endereço: {store.address}</Text>
                 ))}
+
                 <Button mt={2} colorScheme="blue" onPress={() => navigation.navigate('CustomerStoresProducts', { store })}>
                     Ver produtos
                 </Button>
@@ -121,9 +189,37 @@ export default function CustomerStores({ navigation }: Props) {
                     onChangeText={setSearch}
                 />
 
+                <FlatList
+                    data={categories}
+                    keyExtractor={(item) => item.name}
+                    numColumns={3}
+                    columnWrapperStyle={{ justifyContent: 'space-between', marginBottom: 16 }}
+                    renderItem={({ item }) => (
+                        <Button
+                            variant="ghost"
+                            onPress={() => 
+                                setSelectedCategory(item.name === selectedCategory ? null : item.name)
+                            }
+                            flex={1}
+                            style={{ marginHorizontal: 4 }}
+                        >
+                            <VStack alignItems="center">
+                                <Image
+                                    source={{ uri: item.image }}
+                                    style={{ width: 80, height: 80, borderRadius: 10 }}
+                                    resizeMode="cover"
+                                />
+                                <Text mt={3} fontSize="xs" textAlign="center">
+                                    {item.name}
+                                </Text>
+                            </VStack>
+                        </Button>
+                    )}
+                />
+
                 {loading ? (
                     <Text mt={10}>Carregando...</Text>
-                ) : (
+                ) : selectedCategory ? (
                     <FlatList
                         data={filteredStores} 
                         numColumns={2}
@@ -131,6 +227,10 @@ export default function CustomerStores({ navigation }: Props) {
                         keyExtractor={store => store.id.toString()}
                         renderItem={({ item }) => renderStoreCard(item)}
                     />
+                ) : (
+                    <Text mt={10} color="gray.500" textAlign="center">
+                        Selecione um categoria para ver as lojas
+                    </Text>
                 )}
             </VStack>      
         </LayoutWithSidebar>
