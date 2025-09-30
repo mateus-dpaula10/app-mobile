@@ -10,6 +10,8 @@ Route::post('/login', [AuthController::class, 'login'])->name('auth.login');
 Route::post('/register', [AuthController::class, 'register'])->name('auth.register');
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::put('/clients/updateProfile', [AuthController::class, 'update'])->name('clients.update');
+
     Route::get('/companies', [CompanyController::class, 'index'])->name('company.index');
     Route::post('/companies', [CompanyController::class, 'store'])->name('company.store');
     Route::put('/companies/{company}', [CompanyController::class, 'update'])->name('company.update');

@@ -59,4 +59,40 @@ class AuthController extends Controller
             'user'         => $user
         ], 201);
     }
+
+    public function update(Request $request)
+    {
+        $authUser = auth()->user();
+
+        $request->validate([
+            'name'              => 'required|string|max:255',
+            'email'             => 'required|email|unique:users,email,' . $authUser->id,
+            'password'          => 'nullable|min:6|confirmed',
+            'photo'             => 'nullable|image|max:2048'
+        ], [
+            'name.required'     => 'O nome é obrigatório.',
+            'email.required'    => 'O e-mail é obrigatório.',
+            'email.email'       => 'Informe um e-mail válido.',
+            'email.unique'      => 'Este e-mail já está sendo usado.',
+            'password.min'      => 'A senha deve conter pelo menos 6 caracteres.',
+            'password.confirmed'=> 'As senhas não coincidem.',
+            'photo.image'       => 'O arquivo deve ser uma imagem.',
+            'photo.max'         => 'A imagem não pode ter mais que 2MB.'
+        ]);
+
+        $data = $request->only('name', 'email');
+
+        if ($request->filled('password')) {
+            $data['password'] = bcrypt($request->password);
+        }
+
+        if ($request->hasFile('photo')) {
+            $path = $request->file('photo')->store('users', 'public');
+            $data['photo'] = $path;
+        }
+
+        $authUser->update($data);
+
+        return response()->json($authUser);
+    }
 }

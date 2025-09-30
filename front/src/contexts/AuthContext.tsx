@@ -6,7 +6,8 @@ type User = {
     id: number;
     name: string;
     email: string;
-    role: 'client' | 'store' | 'delivery' | 'admin'
+    role: 'client' | 'store' | 'delivery' | 'admin';
+    photo?: string | null;
 };
 
 type AuthContextType = {
@@ -14,6 +15,7 @@ type AuthContextType = {
     login: (user: User, token: string) => void;
     logout: () => void;
     loading: boolean;
+    refreshUser: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,7 +32,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 if (storedUser && token) {
                     setUser(JSON.parse(storedUser));
                     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
                 }
             } catch (e) {
                 console.error('Erro ao carregar usuário:', e);
@@ -56,8 +57,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         delete api.defaults.headers.common['Authorization'];
     };
 
+    const refreshUser = async () => {
+        try {
+            const token = await AsyncStorage.getItem('@token');
+            if (!token) return;
+            const res = await api.get('/clients/me', {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            setUser(res.data);
+            await AsyncStorage.setItem('@user', JSON.stringify(res.data));
+        } catch (err) {
+            console.error('Erro ao atualizar usuário:', err);
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ user, login, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, logout, loading, refreshUser }}>
             {children}
         </AuthContext.Provider>
     );
