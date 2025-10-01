@@ -303,7 +303,7 @@ export default function StoreProducts() {
     return (
         <LayoutWithSidebar>
             <VStack mt={10}>
-                <Text bold>Cadastro de produto</Text>
+                <Text bold fontSize="xl">Cadastro de produto</Text>  
 
                 <Input
                     placeholder="Nome do produto"

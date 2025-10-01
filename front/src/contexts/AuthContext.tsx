@@ -2,12 +2,26 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';  
 import api from '../services/api';
 
+type Address = {
+    id: number;
+    label: string;
+    cep: string;
+    street: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+    number?: string;
+    complement?: string;
+    note?: string;
+};
+
 type User = {
     id: number;
     name: string;
     email: string;
     role: 'client' | 'store' | 'delivery' | 'admin';
     photo?: string | null;
+    addresses?: Address[];
 };
 
 type AuthContextType = {
@@ -61,9 +75,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
             const token = await AsyncStorage.getItem('@token');
             if (!token) return;
+
             const res = await api.get('/clients/me', {
                 headers: { Authorization: `Bearer ${token}` },
             });
+            
             setUser(res.data);
             await AsyncStorage.setItem('@user', JSON.stringify(res.data));
         } catch (err) {

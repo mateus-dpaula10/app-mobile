@@ -53,9 +53,9 @@ type Store = {
 }
 
 export type RootStackParamList = {
+    Home: undefined;
     Login: undefined;
     Register: undefined;
-    Home: undefined;
     CustomerStores: undefined;
     CustomerStoresProducts: { store: Store };
     ClientOrders: undefined;
@@ -78,10 +78,10 @@ export default function AppRoutes() {
 
     if (loading) return null;
 
-    const HomeComponent = user?.role 
+    const HomeComponent: React.ComponentType<any> | null = user?.role 
         ? {
-            client: HomeClient,
-            store: HomeStore,
+            client: CustomerStores,
+            store: StoreProducts,
             delivery: HomeDelivery,
             admin: HomeAdmin
         }[user.role]

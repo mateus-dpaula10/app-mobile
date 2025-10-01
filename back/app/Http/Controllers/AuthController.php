@@ -65,10 +65,20 @@ class AuthController extends Controller
         $authUser = auth()->user();
 
         $request->validate([
-            'name'              => 'required|string|max:255',
-            'email'             => 'required|email|unique:users,email,' . $authUser->id,
-            'password'          => 'nullable|min:6|confirmed',
-            'photo'             => 'nullable|image|max:2048'
+            'name'                     => 'required|string|max:255',
+            'email'                    => 'required|email|unique:users,email,' . $authUser->id,
+            'password'                 => 'nullable|min:6|confirmed',
+            'photo'                    => 'nullable|image|max:2048',
+            'addresses'                => 'nullable|array',
+            'addresses.*.label'        => 'required|string|max:255',
+            'addresses.*.cep'          => 'required|string|size:8',
+            'addresses.*.street'       => 'required|string|max:255',
+            'addresses.*.neighborhood' => 'required|string|max:255',
+            'addresses.*.city'         => 'required|string|max:255',
+            'addresses.*.state'        => 'required|string|max:2',
+            'addresses.*.number'       => 'nullable|string|max:50',
+            'addresses.*.complement'   => 'nullable|string|max:255',
+            'addresses.*.note'         => 'nullable|string|max:500'
         ], [
             'name.required'     => 'O nome é obrigatório.',
             'email.required'    => 'O e-mail é obrigatório.',
@@ -93,6 +103,19 @@ class AuthController extends Controller
 
         $authUser->update($data);
 
-        return response()->json($authUser);
+        if ($request->has('addresses')) {
+            foreach ($request->addresses as $addrData) {
+                if (isset($addrData['id'])) {
+                    $address = $authUser->addresses()->find($addrData['id']);
+                    if ($address) $address->update($addrData);
+                } else {                    
+                    $authUser->addresses()->create($addrData);
+                }
+            }
+        }
+
+        return response()->json([
+            'user' => $authUser->load('addresses')
+        ]);
     }
 }

@@ -126,8 +126,19 @@ export default function CustomerStores({ navigation }: Props) {
     }, []);
 
     const filteredStores = stores
-        .filter(store => store.final_name.toLowerCase().includes(search.toLowerCase()))
-        .filter(store => !selectedCategory || store.category === selectedCategory);
+        .filter(store => {
+            if (!search && !selectedCategory) return false;
+
+            const searchLower = search.toLowerCase();
+            const matchesStoreName = store.final_name.toLowerCase().includes(searchLower);
+            const matchesProductName = store.products.some(product => 
+                product.name.toLowerCase().includes(searchLower)
+            );
+
+            const matchesCategory = !selectedCategory || store.category === selectedCategory;
+
+            return (matchesStoreName || matchesProductName) && matchesCategory;
+        });
 
     function formatPhone(phone: string) {
         if (!phone) return '';
@@ -182,7 +193,7 @@ export default function CustomerStores({ navigation }: Props) {
                 <Text bold fontSize="xl">Lojas disponíveis</Text>  
 
                 <Input  
-                    placeholder="Pesquisar loja"
+                    placeholder="Pesquisar loja ou produto"
                     mt={4}
                     mb={4}
                     value={search}
@@ -192,8 +203,8 @@ export default function CustomerStores({ navigation }: Props) {
                 <FlatList
                     data={categories}
                     keyExtractor={(item) => item.name}
-                    numColumns={3}
-                    columnWrapperStyle={{ justifyContent: 'space-between', marginBottom: 16 }}
+                    numColumns={4}
+                    columnWrapperStyle={{ justifyContent: 'space-between', marginBottom: 12 }}
                     renderItem={({ item }) => (
                         <Button
                             variant="ghost"
@@ -206,10 +217,10 @@ export default function CustomerStores({ navigation }: Props) {
                             <VStack alignItems="center">
                                 <Image
                                     source={{ uri: item.image }}
-                                    style={{ width: 80, height: 80, borderRadius: 10 }}
+                                    style={{ width: 60, height: 60, borderRadius: 10 }}
                                     resizeMode="cover"
                                 />
-                                <Text mt={3} fontSize="xs" textAlign="center">
+                                <Text mt={2} fontSize="xs" textAlign="center">
                                     {item.name}
                                 </Text>
                             </VStack>
@@ -219,7 +230,7 @@ export default function CustomerStores({ navigation }: Props) {
 
                 {loading ? (
                     <Text mt={10}>Carregando...</Text>
-                ) : selectedCategory ? (
+                ) : filteredStores.length > 0 ? (
                     <FlatList
                         data={filteredStores} 
                         numColumns={2}
