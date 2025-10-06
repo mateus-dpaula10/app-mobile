@@ -1,5 +1,4 @@
-import React from "react";
-import { Box, VStack, Text, Icon } from "native-base";
+import { VStack, Text, Icon } from "native-base";
 import { Pressable } from "react-native";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigation } from "@react-navigation/native";
@@ -15,7 +14,9 @@ export default function CustomDrawerContent(props: DrawerContentComponentProps) 
   return (
     <DrawerContentScrollView {...props} contentContainerStyle={{ flex: 1, paddingVertical: 20 }}>
       <VStack space={4} px={4}>
-        <Text color="gray.800" fontSize="xl" bold mb={4}>Menu</Text>
+        <Text color="gray.800" fontSize="xl" bold mb={4}>
+          Menu
+        </Text>
 
         {menuItems.map((item, idx) => (
           <Pressable key={idx} onPress={() => navigation.navigate(item.screen as never)}>

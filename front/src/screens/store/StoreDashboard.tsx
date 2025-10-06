@@ -2,12 +2,12 @@ import React from "react";
 import { View, Text, Button, StyleSheet } from "react-native";
 import { useAuth } from "../../contexts/AuthContext";
 
-export default function AdminDashboard() {
+export default function StoreDashboard() {
   const { logout } = useAuth();
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>📦 Dashboard Admin</Text>
+      <Text style={styles.title}>📦 Dashboard Store</Text>
       <Button title="Sair" onPress={logout} />
     </View>
   );

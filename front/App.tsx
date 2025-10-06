@@ -1,32 +1,16 @@
-import React from 'react'; 
-import { NavigationContainer } from '@react-navigation/native';
-import { Center, NativeBaseProvider, Spinner } from 'native-base';
-import { AuthProvider, useAuth } from './src/contexts/AuthContext';
-import AppRoutes from './src/navigation/AppRoutes';
+import "react-native-gesture-handler";
+import "react-native-reanimated";
 
-function Main() {
-  const { loading } = useAuth();
-
-  if (loading) {
-    return (
-      <Center flex={1}>
-        <Spinner size="lg" />
-      </Center>
-    );
-  }
-
-  return (
-    <NavigationContainer>
-      <AppRoutes />
-    </NavigationContainer>
-  );
-}
+import React from "react";
+import { NativeBaseProvider } from "native-base";
+import { AuthProvider } from "./src/contexts/AuthContext";
+import Routes from "./src/routes";
 
 export default function App() {
   return (
     <NativeBaseProvider>
       <AuthProvider>
-        <Main />
+        <Routes />
       </AuthProvider>
     </NativeBaseProvider>
   );
