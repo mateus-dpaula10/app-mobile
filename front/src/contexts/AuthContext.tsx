@@ -28,6 +28,7 @@ export type User = {
 
 type AuthContextType = {
   user: User | null;
+  token: string | null;
   login: (user: User, token: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -38,18 +39,20 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadUser() {
       try {
         const storedUser = await AsyncStorage.getItem("@user");
-        const token = await AsyncStorage.getItem("@token");
+        const storedToken = await AsyncStorage.getItem("@token");
 
-        if (storedUser && token) {
+        if (storedUser && storedToken) {
           const parsedUser = JSON.parse(storedUser) as User;
           setUser(parsedUser);
-          api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+          setToken(storedToken);
+          api.defaults.headers.common["Authorization"] = `Bearer ${storedToken}`;
         }
       } catch (error) {
         console.error("Erro ao carregar usuário:", error);
@@ -61,12 +64,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loadUser();
   }, []);
 
-  const login = async (userData: User, token: string) => {
+  const login = async (userData: User, authToken: string) => {
     try {
       setUser(userData);
+      setToken(authToken);
       await AsyncStorage.setItem("@user", JSON.stringify(userData));
-      await AsyncStorage.setItem("@token", token);
-      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      await AsyncStorage.setItem("@token", authToken);
+      api.defaults.headers.common["Authorization"] = `Bearer ${authToken}`;
     } catch (error) {
       console.error("Erro no login:", error);
     }
@@ -75,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       setUser(null);
+      setToken(null);
       await AsyncStorage.removeItem("@user");
       await AsyncStorage.removeItem("@token");
       delete api.defaults.headers.common["Authorization"];
@@ -85,7 +90,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = async () => {
     try {
-      const token = await AsyncStorage.getItem("@token");
       if (!token) return;
 
       const { data } = await api.get<User>("/clients/me", {
@@ -100,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, refreshUser, loading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, refreshUser, loading }}>
       {children}
     </AuthContext.Provider>
   );

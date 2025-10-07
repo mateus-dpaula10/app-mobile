@@ -1,43 +1,35 @@
 import React, { useState } from "react";
 import {
+  View,
+  Text,
+  TextInput,
+  Button,
   KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
-} from "react-native";
-import {
-  Box,
-  Button,
-  Center,
-  Icon,
+  StyleSheet,
   Image,
-  Input,
-  VStack,
-  Text,
-  useToast,
-} from "native-base";
-import { Eye, EyeOff } from "lucide-react-native";
+  TouchableOpacity,
+  Alert
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "../../contexts/AuthContext";
 import api from "../../services/api";
-import logo from "../../../assets/login.png";
+import logo from "../../../assets/login.png"; 
 
 export default function LoginScreen() {
   const { login } = useAuth();
+  const navigation = useNavigation();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const toast = useToast();
-  const navigation = useNavigation();
 
   const handleLogin = async () => {
     if (!email || !password) {
-      toast.show({
-        title: "Campos obrigatórios",
-        description: "Preencha todos os campos.",
-        duration: 3000,
-      });
+      Alert.alert("Campos obrigatórios", "Preencha todos os campos");
       return;
     }
 
@@ -46,14 +38,9 @@ export default function LoginScreen() {
       const response = await api.post("/login", { email, password });
       const { user, access_token } = response.data;
       await login(user, access_token);
-    } catch (error: any) {
-      console.error(error.response?.data || error.message);
-      toast.show({
-        title: "Erro ao logar",
-        description: "Credenciais inválidas.",
-        duration: 3000,
-        backgroundColor: "red.500",
-      });
+    } catch (err: any) {
+      console.log(err.response?.data || err.message);
+      Alert.alert("Erro ao logar", "Credenciais inválidas");
     } finally {
       setLoading(false);
     }
@@ -62,56 +49,98 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <Center flex={1} px={4} bg="gray.50">
-          <Box w="100%" maxW="300" alignItems="center" mb={6}>
-            <Image source={logo} alt="Logo" size="2xl" resizeMode="contain" />
-          </Box>
+        <View style={styles.container}>
+          <Image source={logo} style={styles.logo} resizeMode="contain" />
 
-          <Box w="100%" maxW="320" bg="white" p={6} borderRadius="lg" shadow={5}>
-            <VStack space={4}>
-              <Input
-                placeholder="Email"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
 
-              <Input
-                placeholder="Senha"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                InputRightElement={
-                  <Icon
-                    as={showPassword ? EyeOff : Eye}
-                    size={5}
-                    mr={2}
-                    color="muted.400"
-                    onPress={() => setShowPassword(!showPassword)}
-                  />
-                }
-              />
-
-              <Button mt={2} onPress={handleLogin} isLoading={loading}>
-                Entrar
-              </Button>
-
-              <Text
-                mt={2}
-                color="blue.500"
-                textAlign="center"
-                onPress={() => navigation.navigate("Register" as never)}
-              >
-                Não tem conta? Cadastre-se
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={[styles.input, { flex: 1 }]}
+              placeholder="Senha"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity
+              style={styles.showPasswordButton}
+              onPress={() => setShowPassword(!showPassword)}
+            >
+              <Text style={styles.showPasswordText}>
+                {showPassword ? "Ocultar" : "Mostrar"}
               </Text>
-            </VStack>
-          </Box>
-        </Center>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.buttonContainer}>
+            <Button
+              title={loading ? "Carregando..." : "Entrar"}
+              onPress={handleLogin}
+              disabled={loading}
+            />
+          </View>
+
+          <Text
+            style={styles.registerText}
+            onPress={() => navigation.navigate("Register" as never)}
+          >
+            Não tem conta? Cadastre-se
+          </Text>
+        </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    backgroundColor: "#f0f0f0",
+  },
+  logo: {
+    width: "60%",
+    height: 120,
+    alignSelf: "center",
+    marginBottom: 32,
+  },
+  input: {
+    height: 50,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+    backgroundColor: "#fff",
+  },
+  passwordContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  showPasswordButton: {
+    marginLeft: 8,
+  },
+  showPasswordText: {
+    color: "#007bff",
+    fontWeight: "500",
+  },
+  buttonContainer: {
+    marginBottom: 16,
+  },
+  registerText: {
+    textAlign: "center",
+    color: "#007bff",
+  },
+});

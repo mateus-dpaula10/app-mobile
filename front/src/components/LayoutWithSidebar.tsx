@@ -1,10 +1,10 @@
 import React from "react";
-import { Box, VStack, Text, Icon } from "native-base";
-import { Pressable } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigation } from "@react-navigation/native";
 import { sidebarOptions } from "../data/sidebarOptions";
-import { DrawerContentComponentProps, DrawerContentScrollView } from "@react-navigation/drawer";
+import { DrawerContentComponentProps } from "@react-navigation/drawer";
+import { Feather } from '@expo/vector-icons'; // ou lucide-react-native
 
 export default function CustomDrawerContent(props: DrawerContentComponentProps) {
   const { user, logout } = useAuth();
@@ -13,23 +13,33 @@ export default function CustomDrawerContent(props: DrawerContentComponentProps) 
   const menuItems = sidebarOptions[role] || [];
 
   return (
-    <DrawerContentScrollView {...props} contentContainerStyle={{ flex: 1, paddingVertical: 20 }}>
-      <VStack space={4} px={4}>
-        <Text color="gray.800" fontSize="xl" bold mb={4}>Menu</Text>
+    <ScrollView contentContainerStyle={{ flexGrow: 1, paddingVertical: 20 }}>
+      <View style={styles.container}>
+        <Text style={styles.title}>Menu</Text>
 
         {menuItems.map((item, idx) => (
-          <Pressable key={idx} onPress={() => navigation.navigate(item.screen as never)}>
-            <VStack space={1} mb={2}>
-              <Icon as={item.icon} size={5} color="gray.700" />
-              <Text color="gray.700">{item.label}</Text>
-            </VStack>
-          </Pressable>
+          <TouchableOpacity
+            key={idx}
+            style={styles.menuItem}
+            onPress={() => navigation.navigate(item.screen as never)}
+          >
+            <Feather name={item.icon} size={20} color="#333" />
+            <Text style={styles.menuLabel}>{item.label}</Text>
+          </TouchableOpacity>
         ))}
 
-        <Pressable onPress={logout} style={{ marginTop: 20 }}>
-          <Text color="red.500">Sair</Text>
-        </Pressable>
-      </VStack>
-    </DrawerContentScrollView>
+        <TouchableOpacity onPress={logout} style={{ marginTop: 20 }}>
+          <Text style={styles.logout}>Sair</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, paddingHorizontal: 16 },
+  title: { fontSize: 24, fontWeight: "bold", marginBottom: 16 },
+  menuItem: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
+  menuLabel: { marginLeft: 8, fontSize: 16, color: "#333" },
+  logout: { color: "red", fontSize: 16 },
+});

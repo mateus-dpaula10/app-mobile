@@ -1,7 +1,8 @@
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import CustomDrawerContent from "./CustomDrawerContent";
-import ClientDashboard from "../screens/client/ClientDashboard";
 import { useAuth } from "../contexts/AuthContext";
+import ManageUsers from "../screens/admin/ManageUsers";
+import StoreProducts from "../screens/store/StoreProducts";
 
 const Drawer = createDrawerNavigator();
 
@@ -10,9 +11,12 @@ export default function AppDrawer() {
   const role = user?.role || "client";
 
   const screens: Record<string, { name: string; component: any }[]> = {
-    client: [
-      { name: "ClientDashboard", component: ClientDashboard }
+    admin: [
+      { name: "ManageUsers", component: ManageUsers }
     ],
+    store: [
+      { name: "StoreProducts", component: StoreProducts }
+    ]
   };
 
   return (
