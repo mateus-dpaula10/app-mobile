@@ -3,6 +3,11 @@ import CustomDrawerContent from "./CustomDrawerContent";
 import { useAuth } from "../contexts/AuthContext";
 import ManageUsers from "../screens/admin/ManageUsers";
 import StoreProducts from "../screens/store/StoreProducts";
+import StoreProfile from "../screens/store/StoreProfile";
+import CustomerStores from "../screens/client/CustomerStores";
+import CustomerStoresProducts from "../screens/client/CustomerStoresProducts";
+import ClientCart from "../screens/client/ClientCart";
+import ClientOrders from "../screens/client/ClientOrders";
 
 const Drawer = createDrawerNavigator();
 
@@ -15,7 +20,14 @@ export default function AppDrawer() {
       { name: "ManageUsers", component: ManageUsers }
     ],
     store: [
-      { name: "StoreProducts", component: StoreProducts }
+      { name: "StoreProducts", component: StoreProducts },
+      { name: "StoreProfile", component: StoreProfile }
+    ],
+    client: [
+      { name: "CustomerStores", component: CustomerStores },
+      { name: "CustomerStoresProducts", component: CustomerStoresProducts },
+      { name: "ClientCart", component: ClientCart },
+      { name: "ClientOrders", component: ClientOrders }
     ]
   };
 

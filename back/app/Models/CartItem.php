@@ -13,7 +13,7 @@ class CartItem extends Model
         'cart_id',
         'product_id',
         'quantity',
-        'price'
+        'price'        
     ];
 
     public function cart()
@@ -24,5 +24,10 @@ class CartItem extends Model
     public function product()
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function variations()
+    {
+        return $this->belongsToMany(ProductVariation::class, 'cart_item_variations', 'cart_item_id', 'product_variation_id')->withTimestamps();
     }
 }

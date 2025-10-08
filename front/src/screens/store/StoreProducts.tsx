@@ -35,10 +35,6 @@ export default function StoreProducts() {
   const [category, setCategory] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
   const [status, setStatus] = useState<'ativo' | 'em_falta' | 'oculto'>('ativo');
-  const [freeShipping, setFreeShipping] = useState(false);
-  const [firstPurchaseDiscountStore, setFirstPurchaseDiscountStore] = useState(false);
-  const [firstPurchaseDiscountApp, setFirstPurchaseDiscountApp] = useState(false);
-  const [weighable, setWeighable] = useState(false);
   const [variations, setVariations] = useState<{ type: string; value: string }[]>([]);
   const [variationType, setVariationType] = useState('');
   const [variationValue, setVariationValue] = useState('');
@@ -95,10 +91,6 @@ export default function StoreProducts() {
     setStock('');
     setCategory('');
     setStatus('ativo');
-    setFreeShipping(false);
-    setFirstPurchaseDiscountStore(false);
-    setFirstPurchaseDiscountApp(false);
-    setWeighable(false);
     setVariations([]);
     setImages([]);
     setExistingImages([]);
@@ -116,10 +108,6 @@ export default function StoreProducts() {
     formData.append('stock_quantity', stock);
     formData.append('category', category);
     formData.append('status', status);
-    formData.append('free_shipping', freeShipping ? '1' : '0');
-    formData.append('first_purchase_discount_store', firstPurchaseDiscountStore ? '1' : '0');
-    formData.append('first_purchase_discount_app', firstPurchaseDiscountApp ? '1' : '0');
-    formData.append('weighable', weighable ? '1' : '0');
 
     variations.forEach((v, index) => {
       formData.append(`variations[${index}][type]`, v.type);
@@ -165,10 +153,6 @@ export default function StoreProducts() {
     setStock(String(product.stock_quantity));
     setCategory(product.category || '');
     setStatus(product.status as any || 'ativo');
-    setFreeShipping(!!product.free_shipping);
-    setFirstPurchaseDiscountStore(!!product.first_purchase_discount_store);
-    setFirstPurchaseDiscountApp(!!product.first_purchase_discount_app);
-    setWeighable(!!product.weighable);
     setVariations(product.variations || []);
     setExistingImages(product.images.map(img => img.image_path));
     setImages([]);
@@ -215,7 +199,7 @@ export default function StoreProducts() {
     loadCategories();
   }, []);
 
-  const getImageUrl = (path: string) => `http://192.168.0.107:8000/storage/${path}`;
+  const getImageUrl = (path: string) => `http://192.168.0.79:8000/storage/${path}`;
   const { width } = useWindowDimensions();
   const numColumns = width < 500 ? 1 : width < 900 ? 2 : 3;
 
@@ -225,147 +209,129 @@ export default function StoreProducts() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
     >
-      <ScrollView style={{ padding: 16 }}>
-        <Text style={styles.title}>Cadastro de produto</Text>
-
-        <TextInput style={styles.input} placeholder="Nome do produto" value={name} onChangeText={setName} />
-
-        <Text style={styles.label}>Categoria</Text>
-        <Picker
-            selectedValue={category}
-            onValueChange={(value) => setCategory(value)}
-            style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 4 }}
-        >
-            {categories.map((cat, i) => (
-                <Picker.Item key={i} label={cat} value={cat} />
-            ))}
-        </Picker>
-
-        <TextInput
-            placeholder="Ou digite nova categoria"
-            value={category}
-            onChangeText={setCategory}
-            style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 4, padding: 8, marginTop: 4 }}
-        />
-
-        <Text style={styles.label}>Status</Text>
-        <View style={styles.row}>
-            {['ativo', 'em_falta', 'oculto'].map(opt => (
-                <TouchableOpacity key={opt} style={[styles.button, status === opt && styles.buttonSelected]} onPress={() => setStatus(opt as any)}>
-                <Text style={styles.buttonText}>{opt}</Text>
-                </TouchableOpacity>
-            ))}
-        </View>
-
-        <View style={styles.row}>
-            <TouchableOpacity style={[styles.button, freeShipping && styles.buttonSelected]} onPress={() => setFreeShipping(!freeShipping)}>
-                <Text>Frete grátis</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, firstPurchaseDiscountStore && styles.buttonSelected]} onPress={() => setFirstPurchaseDiscountStore(!firstPurchaseDiscountStore)}>
-                <Text>Desc. 1ª compra (loja)</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, firstPurchaseDiscountApp && styles.buttonSelected]} onPress={() => setFirstPurchaseDiscountApp(!firstPurchaseDiscountApp)}>
-                <Text>Desc. 1ª compra (app)</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, weighable && styles.buttonSelected]} onPress={() => setWeighable(!weighable)}>
-                <Text>Pesável</Text>
-            </TouchableOpacity>
-        </View>
-
-        <Text style={styles.label}>Variações</Text>
-        <View style={styles.row}>
-            <TextInput style={[styles.input, { flex: 1 }]} placeholder="Tipo" value={variationType} onChangeText={setVariationType} />
-            <TextInput style={[styles.input, { flex: 1 }]} placeholder="Valor" value={variationValue} onChangeText={setVariationValue} />
-            <TouchableOpacity style={styles.button} onPress={() => {
-                if (variationType && variationValue) {
-                setVariations([...variations, { type: variationType, value: variationValue }]);
-                setVariationType('');
-                setVariationValue('');
-                }
-            }}>
-                <Text>+</Text>
-            </TouchableOpacity>
-        </View>
-
-        {variations.length > 0 && variations.map((v, i) => (
-            <View key={i} style={styles.row}>
-                <Text>{v.type}: {v.value}</Text>
-                <TouchableOpacity onPress={() => setVariations(variations.filter((_, idx) => idx !== i))}>
-                <Text style={{ color: 'red', marginLeft: 8 }}>X</Text>
-                </TouchableOpacity>
-            </View>
-        ))}
-
-        <TextInput style={[styles.input, { height: 60 }]} placeholder="Descrição" value={description} multiline numberOfLines={3} onChangeText={setDescription} />
-        <TextInput style={styles.input} placeholder="Preço" keyboardType="numeric" value={price} onChangeText={setPrice} />
-        <TextInput style={styles.input} placeholder="Estoque" keyboardType="numeric" value={stock} onChangeText={setStock} />
-
-        <TouchableOpacity style={styles.button} onPress={pickImage}>
-            <Text>Selecionar imagem</Text>
-        </TouchableOpacity>
-
-        {existingImages.map((imgPath, index) => (
-            <View key={`old-${index}`} style={{ marginTop: 8, position: 'relative' }}>
-                <Image source={{ uri: getImageUrl(imgPath) }} style={{ width: 100, height: 100 }} />
-                <TouchableOpacity style={styles.deleteButton} onPress={() => setExistingImages(prev => prev.filter((_, i) => i !== index))}>
-                <Text style={{ color: 'white' }}>X</Text>
-                </TouchableOpacity>
-            </View>
-        ))}
-
-        {images.map((img, index) => (
-            <View key={`new-${index}`} style={{ marginTop: 8, position: 'relative' }}>
-                <Image source={{ uri: img.uri }} style={{ width: 100, height: 100 }} />
-                <TouchableOpacity style={styles.deleteButton} onPress={() => setImages(prev => prev.filter((_, i) => i !== index))}>
-                <Text style={{ color: 'white' }}>X</Text>
-                </TouchableOpacity>
-            </View>
-        ))}
-
-        <TouchableOpacity style={styles.saveButton} onPress={handleAddProduct} disabled={saving}>
-            <Text style={{ color: 'white' }}>Salvar produto</Text>
-        </TouchableOpacity>
-
-        {loading ? (
-            <Text style={{ marginTop: 16 }}>Carregando produtos...</Text>
-        ) : (
-            <FlatList
-                data={products}
-                numColumns={numColumns}
-                columnWrapperStyle={numColumns > 1 ? { justifyContent: 'space-between' } : undefined}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item }) => (
-                <View style={styles.productCard}>
-                    {item.images && item.images.length > 0 ? (
-                    <Image source={{ uri: getImageUrl(item.images[0].image_path) }} style={{ width: 100, height: 100 }} />
-                    ) : <Text>Sem imagem</Text>}
-                    <Text style={{ fontWeight: 'bold' }}>{item.name}</Text>
-                    <Text>{item.description}</Text>
-                    <Text>Preço: R$ {Number(item.price).toFixed(2).replace('.', ',')}</Text>
-                    <Text>Estoque: {item.stock_quantity}</Text>
-                    <Text>Categoria: {item.category}</Text>
-                    <Text>Status: {item.status}</Text>
-                    {item.free_shipping && <Text>🚚 Frete grátis</Text>}
-                    {item.first_purchase_discount_store && <Text>🎉 Desc. 1ª compra (loja)</Text>}
-                    {item.first_purchase_discount_app && <Text>📱 Desc. 1ª compra (app)</Text>}
-                    {item.weighable && <Text>⚖️ Pesável</Text>}
-                    {item.variations && item.variations.length > 0 && (
-                    <Text>Variações: {item.variations.map(v => `${v.type}: ${v.value}`).join(', ')}</Text>
-                    )}
-
-                    <View style={styles.row}>
-                    <TouchableOpacity style={[styles.button, { backgroundColor: 'blue' }]} onPress={() => handleEditProduct(item)}>
-                        <Text style={{ color: 'white' }}>Editar</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.button, { backgroundColor: 'red' }]} onPress={() => handleDeleteProduct(item.id)}>
-                        <Text style={{ color: 'white' }}>Excluir</Text>
-                    </TouchableOpacity>
-                    </View>
-                </View>
-                )}
+      <FlatList
+        style={{ padding: 16 }}
+        data={products}
+        numColumns={numColumns}
+        columnWrapperStyle={numColumns > 1 ? { justifyContent: 'space-between' } : undefined}
+        keyExtractor={(item) => item.id.toString()}
+        ListHeaderComponent={
+          <>
+            <Text style={styles.title}>Cadastro de produto</Text>
+    
+            <TextInput style={styles.input} placeholder="Nome do produto" value={name} onChangeText={setName} />
+    
+            <Text style={styles.label}>Categoria</Text>
+            <Picker
+                selectedValue={category}
+                onValueChange={(value) => setCategory(value)}
+                style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 4 }}
+            >
+                {categories.map((cat, i) => (
+                    <Picker.Item key={i} label={cat} value={cat} />
+                ))}
+            </Picker>
+    
+            <TextInput
+                placeholder="Ou digite nova categoria"
+                value={category}
+                onChangeText={setCategory}
+                style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 4, padding: 8, marginTop: 4 }}
             />
+    
+            <Text style={styles.label}>Status</Text>
+            <View style={styles.row}>
+                {['ativo', 'em_falta', 'oculto'].map(opt => (
+                    <TouchableOpacity key={opt} style={[styles.button, status === opt && styles.buttonSelected]} onPress={() => setStatus(opt as any)}>
+                    <Text style={styles.buttonText}>{opt}</Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+    
+            <Text style={styles.label}>Variações</Text>
+            <View style={styles.row}>
+                <TextInput style={[styles.input, { flex: 1 }]} placeholder="Tipo" value={variationType} onChangeText={setVariationType} />
+                <TextInput style={[styles.input, { flex: 1 }]} placeholder="Valor" value={variationValue} onChangeText={setVariationValue} />
+                <TouchableOpacity style={styles.button} onPress={() => {
+                    if (variationType && variationValue) {
+                    setVariations([...variations, { type: variationType, value: variationValue }]);
+                    setVariationType('');
+                    setVariationValue('');
+                    }
+                }}>
+                    <Text>+</Text>
+                </TouchableOpacity>
+            </View>
+    
+            {variations.length > 0 && variations.map((v, i) => (
+                <View key={i} style={styles.row}>
+                    <Text>{v.type}: {v.value}</Text>
+                    <TouchableOpacity onPress={() => setVariations(variations.filter((_, idx) => idx !== i))}>
+                    <Text style={{ color: 'red', marginLeft: 8 }}>X</Text>
+                    </TouchableOpacity>
+                </View>
+            ))}
+    
+            <TextInput style={[styles.input, { height: 60 }]} placeholder="Descrição" value={description} multiline numberOfLines={3} onChangeText={setDescription} />
+            <TextInput style={styles.input} placeholder="Preço" keyboardType="numeric" value={price} onChangeText={setPrice} />
+            <TextInput style={styles.input} placeholder="Estoque" keyboardType="numeric" value={stock} onChangeText={setStock} />
+    
+            <TouchableOpacity style={styles.button} onPress={pickImage}>
+                <Text>Selecionar imagem</Text>
+            </TouchableOpacity>
+    
+            {existingImages.map((imgPath, index) => (
+                <View key={`old-${index}`} style={{ marginTop: 8, position: 'relative' }}>
+                    <Image source={{ uri: getImageUrl(imgPath) }} style={{ width: 100, height: 100 }} />
+                    <TouchableOpacity style={styles.deleteButton} onPress={() => setExistingImages(prev => prev.filter((_, i) => i !== index))}>
+                    <Text style={{ color: 'white' }}>X</Text>
+                    </TouchableOpacity>
+                </View>
+            ))}
+    
+            {images.map((img, index) => (
+                <View key={`new-${index}`} style={{ marginTop: 8, position: 'relative' }}>
+                    <Image source={{ uri: img.uri }} style={{ width: 100, height: 100 }} />
+                    <TouchableOpacity style={styles.deleteButton} onPress={() => setImages(prev => prev.filter((_, i) => i !== index))}>
+                    <Text style={{ color: 'white' }}>X</Text>
+                    </TouchableOpacity>
+                </View>
+            ))}
+    
+            <TouchableOpacity style={styles.saveButton} onPress={handleAddProduct} disabled={saving}>
+                <Text style={{ color: 'white' }}>Salvar produto</Text>
+            </TouchableOpacity>
+    
+            {loading && <Text style={{ marginTop: 16 }}>Carregando produtos...</Text>}
+          </>
+        }
+        renderItem={({ item }) => (
+          <View style={styles.productCard}>
+            {item.images && item.images.length > 0 ? (
+              <Image source={{ uri: getImageUrl(item.images[0].image_path) }} style={{ width: 100, height: 100 }} />
+            ) : <Text>Sem imagem</Text>}
+            <Text style={{ fontWeight: 'bold' }}>{item.name}</Text>
+            <Text>{item.description}</Text>
+            <Text>Preço: R$ {Number(item.price).toFixed(2).replace('.', ',')}</Text>
+            <Text>Estoque: {item.stock_quantity}</Text>
+            <Text>Categoria: {item.category}</Text>
+            <Text>Status: {item.status}</Text>
+
+            {item.variations && item.variations.length > 0 && (
+              <Text>Variações: {item.variations.map(v => `${v.type}: ${v.value}`).join(', ')}</Text>
+            )}
+
+            <View style={styles.row}>
+              <TouchableOpacity style={[styles.button, { backgroundColor: 'blue' }]} onPress={() => handleEditProduct(item)}>
+                <Text style={{ color: 'white' }}>Editar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, { backgroundColor: 'red' }]} onPress={() => handleDeleteProduct(item.id)}>
+                <Text style={{ color: 'white' }}>Excluir</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         )}
-      </ScrollView>
+      />
     </KeyboardAvoidingView>
   );
 }

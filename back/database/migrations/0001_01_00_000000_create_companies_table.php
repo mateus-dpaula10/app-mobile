@@ -18,11 +18,16 @@ return new class extends Migration
             $table->string('cnpj')->unique();
             $table->string('phone')->nullable();
             $table->string('address')->nullable();
-            $table->string('plan')->nullable();
+            $table->string('plan')->default('padrao');
             $table->boolean('active')->default(true);
             $table->string('email')->nullable();
             $table->string('category')->nullable();
             $table->enum('status', ['active', 'suspended'])->default('active');
+            
+            $table->boolean('free_shipping')->default(false);
+            $table->boolean('first_purchase_discount_store')->default(false);
+            $table->boolean('first_purchase_discount_app')->default(false);
+
             $table->string('logo')->nullable();
             $table->decimal('delivery_fee', 8, 2)->nullable();
             $table->integer('delivery_radius')->nullable();

@@ -138,7 +138,7 @@ export default function CustomerStoresProducts({ route }: CustomerStoresProducts
                 {product.images && product.images.length > 0 && (
                     <Box position="relative" width="100%" height={200}>
                         <Image
-                            source={{ uri: `http://localhost:8000/storage/${product.images[currentIndex].image_path}` }}
+                            source={{ uri: `http://192.168.0.79:8000/storage/${product.images[currentIndex].image_path}` }}
                             alt={product.name}
                             width="100%"
                             height="100%"

@@ -272,9 +272,24 @@ class ProductController extends Controller
         $authUser = auth()->user();
 
         $request->validate([
-            'products'            => 'required|array|min:1',
-            'products.*.id'       => 'required|integer|exists:products,id',
-            'products.*.quantity' => 'required|integer|min:1'
+            'products' => 'required|array|min:1',
+            'products.*.id' => 'required|integer|exists:products,id',
+            'products.*.quantity' => 'required|integer|min:1',
+            'products.*.variation_ids' => 'nullable|array',
+            'products.*.variation_ids.*' => 'nullable|integer|exists:product_variations,id',
+        ], [
+            'products.required' => 'É necessário enviar ao menos um produto.',
+            'products.array' => 'O campo produtos deve ser um array.',
+            'products.min' => 'É necessário enviar ao menos um produto.',
+            'products.*.id.required' => 'O ID do produto é obrigatório.',
+            'products.*.id.integer' => 'O ID do produto deve ser um número inteiro.',
+            'products.*.id.exists' => 'O produto informado não existe.',
+            'products.*.quantity.required' => 'A quantidade do produto é obrigatória.',
+            'products.*.quantity.integer' => 'A quantidade deve ser um número inteiro.',
+            'products.*.quantity.min' => 'A quantidade mínima é 1.',
+            'products.*.variation_ids.array' => 'As variações devem ser enviadas em um array.',
+            'products.*.variation_ids.*.integer' => 'Cada ID de variação deve ser um número inteiro.',
+            'products.*.variation_ids.*.exists' => 'A variação selecionada não existe.',
         ]);
 
         $cartQuery = Cart::query();
@@ -288,7 +303,7 @@ class ProductController extends Controller
 
         if (!$cart) {
             $cart = Cart::create([
-                'user_id'    => $authUser->role === 'client' ? $authUser->id : null,
+                'user_id' => $authUser->role === 'client' ? $authUser->id : null,
                 'company_id' => $authUser->role !== 'client' ? $authUser->company_id : null,
             ]);
         }
@@ -306,49 +321,52 @@ class ProductController extends Controller
                 ], 404);
             }
 
-            if ($product->stock_quantity < $p['quantity']) {
+            $existingCartItem = $cart->items()->where('product_id', $product->id)->first();
+            $currentQtyInCart = $existingCartItem ? $existingCartItem->quantity : 0;
+            $newQty = $currentQtyInCart + $p['quantity'];
+
+            if ($product->stock_quantity < $newQty) {
                 return response()->json([
                     'message' => "Produto {$product->name} não possui estoque suficiente"
                 ], 422);
             }
 
             $cartItemsData[] = [
-                'product'  => $product,
+                'product' => $product,
                 'quantity' => $p['quantity'],
-                'price'    => $product->price
+                'price' => $product->price,
+                'variation_ids' => $p['variation_ids'] ?? []
             ];
         }
 
         if ($authUser->role === 'client' && $existingCompanyId) {
             $newCompanyId = $cartItemsData[0]['product']->company_id;
             if ($existingCompanyId !== $newCompanyId) {
-                $cart->items()->delete(); 
+                $cart->items()->delete();
             }
         }
-
+        
         foreach ($cartItemsData as $item) {
             $cartItem = $cart->items()->where('product_id', $item['product']->id)->first();
 
             if ($cartItem) {
-                $newQty = $cartItem->quantity + $item['quantity'];
-                if ($item['product']->stock_quantity < $newQty) {
-                    return response()->json([
-                        'message' => "Produto {$item['product']->name} não possui estoque suficiente"
-                    ], 422);
-                }
-                $cartItem->update(['quantity' => $newQty]);
+                $cartItem->update(['quantity' => $cartItem->quantity + $item['quantity']]);
             } else {
-                $cart->items()->create([
+                $cartItem = $cart->items()->create([
                     'product_id' => $item['product']->id,
                     'quantity'   => $item['quantity'],
-                    'price'      => $item['price']
+                    'price'      => $item['price'],
                 ]);
+            }
+
+            if (!empty($item['variation_ids'])) {
+                $cartItem->variations()->sync($item['variation_ids']); 
             }
         }
 
         return response()->json([
             'message' => 'Produtos adicionados ao carrinho com sucesso',
-            'cart'    => $cart->load('items.product')
+            'cart' => $cart->load('items.product', 'items.variations')
         ]);
     }
 

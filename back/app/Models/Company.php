@@ -20,7 +20,17 @@ class Company extends Model
         'logo',
         'delivery_fee',
         'delivery_radius',
-        'opening_hours'
+        'opening_hours',
+        'free_shipping',
+        'first_purchase_discount_store',
+        'first_purchase_discount_app'
+    ];
+
+    protected $casts = [
+        'free_shipping'                 => 'boolean',
+        'first_purchase_discount_store' => 'boolean',
+        'first_purchase_discount_app'   => 'boolean',
+        'opening_hours'                 => 'array'
     ];
 
     public function admin()

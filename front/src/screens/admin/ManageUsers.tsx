@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, TextInput, Button, FlatList, Alert, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, TextInput, Button, FlatList, Alert, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Switch } from "react-native";
 import { useAuth } from "../../contexts/AuthContext";
 import axios from "axios";
 import { Picker } from "@react-native-picker/picker";
@@ -13,6 +13,10 @@ type Company = {
   phone: string;
   address: string;
   plan: string;
+  free_shipping?: boolean;
+  first_purchase_discount_store?: boolean;
+  first_purchase_discount_app?: boolean;
+  weighable?: boolean;
   admin?: {
     name: string;
     email: string;
@@ -33,7 +37,7 @@ export default function ManageUsers() {
     final_name: "",
     phone: "",
     address: "",
-    plan: "",
+    plan: "padrao",
   });
   const [admin, setAdmin] = useState<Admin>({ name: "", email: "", password: "" });
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -69,7 +73,7 @@ export default function ManageUsers() {
     } catch (error) {
         Alert.alert('Erro ao buscar CNPJ', 'CNPJ inválido ou não encontrado.');
     }
-  };
+  };  
 
   async function handleSubmit() {
     try {
@@ -83,7 +87,17 @@ export default function ManageUsers() {
         Alert.alert("Sucesso", "Empresa criada!");
       }
 
-      setCompany({ cnpj: "", legal_name: "", final_name: "", phone: "", address: "", plan: "" });
+      setCompany({ 
+        cnpj: "", 
+        legal_name: "", 
+        final_name: "", 
+        phone: "", 
+        address: "", 
+        plan: "",
+        free_shipping: false,
+        first_purchase_discount_store: false,
+        first_purchase_discount_app: false,
+      });
       setAdmin({ name: "", email: "", password: "" });
       loadCompanies();
     } catch (err) {
@@ -101,6 +115,9 @@ export default function ManageUsers() {
         phone: company.phone ?? "",
         address: company.address ?? "",
         plan: company.plan ?? "",
+        free_shipping: company.free_shipping ?? false,
+        first_purchase_discount_store: company.first_purchase_discount_store ?? false,
+        first_purchase_discount_app: company.first_purchase_discount_app ?? false,
     });
 
     if (company.admin) {
@@ -149,94 +166,119 @@ export default function ManageUsers() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
     >
-      <ScrollView style={{ padding: 16 }}>
-        <Text style={styles.title}>Cadastro da Loja</Text>
+      <FlatList 
+        style={{ padding: 16 }}
+        data={companies}
+        keyExtractor={(item) => item.id?.toString() ?? Math.random().toString()}
+        ListHeaderComponent={
+          <>
+            <Text style={styles.title}>Cadastro da Loja</Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="CNPJ"
-          value={company.cnpj}
-          onChangeText={(v) => setCompany((c) => ({ ...c, cnpj: v }))}
-          onBlur={() => fetchCNPJData(company.cnpj)}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Razão Social"
-          value={company.legal_name}
-          onChangeText={(v) => setCompany((c) => ({ ...c, legal_name: v }))}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Telefone"
-          value={formatPhone(company.phone)}
-          onChangeText={(v) => setCompany((c) => ({ ...c, phone: v }))}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Endereço"
-          value={company.address}
-          onChangeText={(v) => setCompany((c) => ({ ...c, address: v }))}
-        />
-        <TextInput 
-          style={styles.input}
-          placeholder="Nome da loja" 
-          value={company.final_name} 
-          onChangeText={v => setCompany(c => ({ ...c, final_name: v }))} 
-        />    
-        <View style={styles.pickerWrapper}>
-          <Picker
-              selectedValue={company.plan}
-              onValueChange={(value) =>
-                  setCompany((c) => ({ ...c, plan: value }))
-              }
-          >
-              <Picker.Item label="Plano padrão" value="padrao" />
-          </Picker>
-        </View>
+            <TextInput
+              style={styles.input}
+              placeholder="CNPJ"
+              value={company.cnpj}
+              onChangeText={(v) => setCompany((c) => ({ ...c, cnpj: v }))}
+              onBlur={() => fetchCNPJData(company.cnpj)}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Razão Social"
+              value={company.legal_name}
+              onChangeText={(v) => setCompany((c) => ({ ...c, legal_name: v }))}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Telefone"
+              value={formatPhone(company.phone)}
+              onChangeText={(v) => setCompany((c) => ({ ...c, phone: v }))}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Endereço"
+              value={company.address}
+              onChangeText={(v) => setCompany((c) => ({ ...c, address: v }))}
+            />
+            <TextInput 
+              style={styles.input}
+              placeholder="Nome da loja" 
+              value={company.final_name} 
+              onChangeText={v => setCompany(c => ({ ...c, final_name: v }))} 
+            />    
 
-        <Text style={styles.subtitle}>Admin da Loja</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Nome"
-          value={admin.name}
-          onChangeText={(v) => setAdmin((a) => ({ ...a, name: v }))}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          value={admin.email}
-          onChangeText={(v) => setAdmin((a) => ({ ...a, email: v }))}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Senha"
-          secureTextEntry
-          value={admin.password}
-          onChangeText={(v) => setAdmin((a) => ({ ...a, password: v }))}
-        />
+            <Text style={styles.subtitle}>Configurações da Loja</Text>
 
-        <Button title={company.id ? "Atualizar" : "Cadastrar"} onPress={handleSubmit} />
+            <View style={styles.switchRow}>
+              <Text>🚚 Frete grátis</Text>
+              <Switch
+                value={company.free_shipping ?? false}
+                onValueChange={(v) => setCompany((c) => ({ ...c, free_shipping: v }))}
+              />
+            </View>
 
-        <Text style={[styles.title, { marginTop: 20 }]}>Empresas Cadastradas</Text>
+            <View style={styles.switchRow}>
+              <Text>🎉 Desc. 1ª compra (loja)</Text>
+              <Switch
+                value={company.first_purchase_discount_store ?? false}
+                onValueChange={(v) => setCompany((c) => ({ ...c, first_purchase_discount_store: v }))}
+              />
+            </View>
 
-        {loading ? (
-          <Text>Carregando...</Text>
-        ) : (
-          <FlatList
-            data={companies}
-            keyExtractor={(item) => item.id?.toString() ?? Math.random().toString()}
-            renderItem={({ item }) => (
-              <View style={styles.card}>
-                <Text style={styles.cardTitle}>{item.final_name}</Text>
-                <Text>CNPJ: {item.cnpj}</Text>
-                <Text>Admin: {item.admin?.email || "Não cadastrado"}</Text>
-                <Button title="Editar" onPress={() => handleEdit(item)} />
-                <Button title="Excluir" color="red" onPress={() => handleDelete(item.id)} />
-              </View>
-            )}
-          />
+            <View style={styles.switchRow}>
+              <Text>📱 Desc. 1ª compra (app)</Text>
+              <Switch
+                value={company.first_purchase_discount_app ?? false}
+                onValueChange={(v) => setCompany((c) => ({ ...c, first_purchase_discount_app: v }))}
+              />
+            </View>
+
+            <View style={styles.pickerWrapper}>
+              <Picker
+                  selectedValue={company.plan}
+                  onValueChange={(value) =>
+                      setCompany((c) => ({ ...c, plan: value }))
+                  }
+              >
+                  <Picker.Item label="Plano padrão" value="padrao" />
+              </Picker>
+            </View>
+
+            <Text style={styles.subtitle}>Admin da Loja</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Nome"
+              value={admin.name}
+              onChangeText={(v) => setAdmin((a) => ({ ...a, name: v }))}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              value={admin.email}
+              onChangeText={(v) => setAdmin((a) => ({ ...a, email: v }))}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Senha"
+              secureTextEntry
+              value={admin.password}
+              onChangeText={(v) => setAdmin((a) => ({ ...a, password: v }))}
+            />
+
+            <Button title={company.id ? "Atualizar" : "Cadastrar"} onPress={handleSubmit} />
+
+            <Text style={[styles.title, { marginTop: 20 }]}>Empresas Cadastradas</Text>
+          </>
+        }
+        renderItem={({ item }) => (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{item.final_name}</Text>
+            <Text>CNPJ: {item.cnpj}</Text>
+            <Text>Admin: {item.admin?.email || "Não cadastrado"}</Text>
+            <Button title="Editar" onPress={() => handleEdit(item)} />
+            <Button title="Excluir" color="red" onPress={() => handleDelete(item.id)} />
+          </View>
         )}
-      </ScrollView>
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -265,5 +307,11 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
     borderRadius: 8,
     overflow: "hidden",
+  },
+  switchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginVertical: 6,
   },
 });

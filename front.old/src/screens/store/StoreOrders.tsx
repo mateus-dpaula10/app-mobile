@@ -91,7 +91,7 @@ export default function StoreOrders() {
             <HStack>
                 {item.product.images && item.product.images.length > 0 && (
                     <Image
-                        source={{ uri: `http://localhost:8000/storage/${item.product.images[0].image_path}` }}
+                        source={{ uri: `http://192.168.0.79:8000/storage/${item.product.images[0].image_path}` }}
                         alt={item.product.name}
                         width={100}
                         height="100%"

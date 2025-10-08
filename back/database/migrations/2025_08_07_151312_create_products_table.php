@@ -19,10 +19,6 @@ return new class extends Migration
             $table->unsignedInteger('stock_quantity')->default(0);
             $table->foreignId('category_id')->nullable()->constrained()->onDelete('set null');
             $table->enum('status', ['ativo', 'em_falta', 'oculto'])->default('ativo');
-            $table->boolean('free_shipping')->default(false);
-            $table->boolean('first_purchase_discount_store')->default(false);
-            $table->boolean('first_purchase_discount_app')->default(false);
-            $table->boolean('weighable')->default(false);
             $table->json('variations')->nullable();
             $table->foreignId('company_id')->constrained()->onDelete('cascade');
             $table->timestamps();
