@@ -294,7 +294,7 @@ export default function StoreProducts() {
     }, []);
 
     const getImageUrl = (path: string) => {
-        return `http://192.168.0.72:8000/storage/${path}`
+        return `http://192.168.0.79:8000/storage/${path}`
     };
 
     const { width } = useWindowDimensions();

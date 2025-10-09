@@ -19,7 +19,6 @@ return new class extends Migration
             $table->unsignedInteger('stock_quantity')->default(0);
             $table->foreignId('category_id')->nullable()->constrained()->onDelete('set null');
             $table->enum('status', ['ativo', 'em_falta', 'oculto'])->default('ativo');
-            $table->json('variations')->nullable();
             $table->foreignId('company_id')->constrained()->onDelete('cascade');
             $table->timestamps();
         });

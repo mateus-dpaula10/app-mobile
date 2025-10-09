@@ -88,13 +88,27 @@ export default function StoreProfile() {
           setCategory('');
         }
         setStatus(company.status || 'active');
-        setDeliveryFee(company.delivery_fee || '');
-        setDeliveryRadius(company.delivery_radius || '');
-        setOpeningHours(company.opening_hours || []);
+        setDeliveryFee(company.delivery_fee != null ? Number(company.delivery_fee).toFixed(2).replace('.', ',') : '');
+        setDeliveryRadius(company.delivery_radius != null ? String(company.delivery_radius) : '');
+
+        let hours: OpeningHour[] = [];
+        if (company.opening_hours) {
+          if (typeof company.opening_hours === "string") {
+            try {
+              hours = JSON.parse(company.opening_hours);
+            } catch (e) {
+              console.error("Erro ao parsear opening_hours:", e);
+              hours = [];
+            }
+          } else {
+            hours = company.opening_hours;
+          }
+        }
+        setOpeningHours(hours);
 
         if (company.logo) {
           setLogo({
-            uri: `http://192.168.0.72:8000/storage/${company.logo}`,
+            uri: `http://192.168.0.79:8000/storage/${company.logo}`,
             name: 'logo.jpg',
             type: 'image/jpeg',
             isNew: false
@@ -206,7 +220,7 @@ export default function StoreProfile() {
   }
 
   const handleAddOpeningHour = () => {
-    setOpeningHours([...openingHours, { day: '', open: '', close: '' }]);
+    setOpeningHours((prev) => [...prev, { day: '', open: '', close: '' }]);
   };
 
   const handleRemoveOpeningHour = (index: number) => {
@@ -217,6 +231,18 @@ export default function StoreProfile() {
 
   const handleChangeOpeningHour = (index: number, key: keyof OpeningHour, value: string) => {
     const updated = [...openingHours];
+
+    if (key === "day" && value) {
+      const countSameDay = updated.filter((h, i) => h.day === value && i !== index).length;
+      if (countSameDay >= 2) {
+        Alert.alert(
+          "Limite atingido",
+          `O dia ${value} já possui 2 registros de horários.`
+        );
+        return;
+      }
+    }
+
     updated[index][key] = value;
     setOpeningHours(updated);
   };
@@ -287,8 +313,11 @@ export default function StoreProfile() {
                 )}
 
                 <Text style={[styles.label, { marginTop: 16 }]}>Horários de Abertura</Text>
-                <TouchableOpacity style={[styles.button, { marginTop: 8 }]} onPress={handleAddOpeningHour}>
-                <Text style={styles.buttonText}>Adicionar horário</Text>
+                <TouchableOpacity
+                  style={[styles.button, { marginTop: 8 }]}
+                  onPress={handleAddOpeningHour}
+                >
+                  <Text style={styles.buttonText}>Adicionar horário</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={[styles.button, { backgroundColor: 'green', marginTop: 16 }]} onPress={handleSave}>

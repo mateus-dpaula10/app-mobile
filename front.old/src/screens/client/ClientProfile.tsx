@@ -61,7 +61,7 @@ export default function ClientProfile() {
             setAddresses(user.addresses || []);
             if (user.photo) {
                 setPhoto({
-                    uri: `http://192.168.0.72:8000/storage/${user.photo}`,
+                    uri: `http://192.168.0.79:8000/storage/${user.photo}`,
                     name: 'profile.jpg',
                     type: 'image/jpeg',
                     isNew: false

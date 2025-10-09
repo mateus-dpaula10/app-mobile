@@ -17,7 +17,7 @@ class ProductController extends Controller
 {
     public function index()
     {
-        $products = Product::where('company_id', auth()->user()->company_id)->with('images')->get();
+        $products = Product::where('company_id', auth()->user()->company_id)->with(['images', 'variations'])->get();
         
         return response()->json($products);
     }
@@ -55,13 +55,6 @@ class ProductController extends Controller
             'stock_quantity'                => 'required|integer|min:0',
             'category'                      => 'nullable|string|max:255',
             'status'                        => 'required|in:ativo,em_falta,oculto',
-            'free_shipping'                 => 'boolean',
-            'first_purchase_discount_store' => 'boolean',
-            'first_purchase_discount_app'   => 'boolean',
-            'weighable'                     => 'boolean',
-            'variations'                    => 'nullable|array',
-            'variations.*.type'             => 'required_with:variations|string|max:255',
-            'variations.*.value'            => 'required_with:variations|string|max:255',
             'images.*'                      => 'nullable|image|mimes:jpg,jpeg,png|max:2048'
         ], [
             'name.required'           => 'O campo nome é obrigatório.',
@@ -95,13 +88,17 @@ class ProductController extends Controller
             'price'                         => $request->price,
             'stock_quantity'                => $request->stock_quantity,
             'status'                        => $request->status,
-            'free_shipping'                 => $request->free_shipping ?? false,
-            'first_purchase_discount_store' => $request->first_purchase_discount_store ?? false,
-            'first_purchase_discount_app'   => $request->first_purchase_discount_app ?? false,
-            'weighable'                     => $request->weighable ?? false,
-            'variations'                    => $request->variations,
             'category_id'                   => $categoryId
         ]);
+
+        if ($request->filled('variations')) {
+            foreach ($request->variations as $v) {
+                $product->variations()->create([
+                    'type'  => $v['type'],
+                    'value' => $v['value'],
+                ]);
+            }
+        }
 
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $image) {
@@ -112,7 +109,7 @@ class ProductController extends Controller
             }
         }
 
-        return response()->json($product->load('images'), 201);
+        return response()->json($product->load('images', 'variations'), 201);
     }
 
     public function update(Request $request, Product $product) 
@@ -137,13 +134,6 @@ class ProductController extends Controller
             'stock_quantity'                => 'required|integer|min:0',
             'category'                      => 'nullable|string|max:255',
             'status'                        => 'required|in:ativo,em_falta,oculto',
-            'free_shipping'                 => 'boolean',
-            'first_purchase_discount_store' => 'boolean',
-            'first_purchase_discount_app'   => 'boolean',
-            'weighable'                     => 'boolean',
-            'variations'                    => 'nullable|array',
-            'variations.*.type'             => 'required_with:variations|string|max:255',
-            'variations.*.value'            => 'required_with:variations|string|max:255',
             'images.*'                      => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
             'existing_images'               => 'nullable|array'
         ], [
@@ -176,18 +166,25 @@ class ProductController extends Controller
             'price'                         => $request->price,
             'stock_quantity'                => $request->stock_quantity,
             'status'                        => $request->status,
-            'free_shipping'                 => $request->boolean('free_shipping'),
-            'first_purchase_discount_store' => $request->boolean('first_purchase_discount_store'),
-            'first_purchase_discount_app'   => $request->boolean('first_purchase_discount_app'),
-            'weighable'                     => $request->boolean('weighable'),
-            'variations'                    => $request->variations, 
             'category_id'                   => $categoryId
         ]);
+
+        if ($request->filled('variations')) {
+            $product->variations()->delete();
+
+            foreach ($request->variations as $v) {
+                $product->variations()->create([
+                    'type'  => $v['type'],
+                    'value' => $v['value'],
+                ]);
+            }
+        }
 
         $existingImages = $request->input('existing_images', []);
         $imagesToDelete = $product->images()
             ->whereNotIn('image_path', $existingImages)
             ->get();
+            
         foreach ($imagesToDelete as $img) {
             Storage::disk('public')->delete($img->image_path);
             $img->delete();
@@ -202,7 +199,7 @@ class ProductController extends Controller
             }
         }
 
-        return response()->json($product->load('images'), 200);
+        return response()->json($product->load('images', 'variations'), 200);
     }
 
     public function destroy(Product $product)

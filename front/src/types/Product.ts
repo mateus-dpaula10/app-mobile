@@ -6,10 +6,6 @@ export interface Product {
     stock_quantity: number;
     category?: string; 
     status: 'ativo' | 'em_falta' | 'oculto'; 
-    free_shipping: boolean; 
-    first_purchase_discount_store: boolean; 
-    first_purchase_discount_app: boolean; 
-    weighable: boolean; 
     variations: {
         id?: number;
         type: string; 

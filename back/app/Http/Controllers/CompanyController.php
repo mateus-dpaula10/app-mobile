@@ -94,7 +94,7 @@ class CompanyController extends Controller
         $request->validate([
             'final_name'            => 'required|string|unique:companies,final_name,' . $company->id,
             'phone'                 => 'nullable|string|max:20',
-            'email'                 => 'nullable|email',
+            'email'                 => 'nullable|email|unique:companies,email,' . $company->id,
             'category'              => 'nullable|string|max:255',
             'status'                => 'nullable|in:active,suspended,pending',
             'logo'                  => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
@@ -106,6 +106,7 @@ class CompanyController extends Controller
             'opening_hours.*.close' => 'required_with:opening_hours|string|max:5',
         ], [
             'email.email'                         => 'O e-mail informado não é válido.',
+            'email.unique'                        => 'Este e-mail já está sendo usado por outra empresa.',
             'category.string'                     => 'A categoria deve ser uma string.',
             'category.max'                        => 'A categoria não pode ter mais de :max caracteres.',
             'status.in'                           => 'Status inválido. Deve ser: active, suspended ou pending.',
@@ -218,9 +219,17 @@ class CompanyController extends Controller
     
     public function companies()
     {
-        $companies = Company::with(['products.images'])
-            ->where('active', true)
-            ->get();
+        $companies = Company::with(['products' => function ($query) {
+            $query->where('stock_quantity', '>', 0)
+                ->where('status', true)
+                ->with(['images', 'variations']);
+        }])
+        ->where('active', true)
+        ->whereHas('products', function ($query) {
+            $query->where('stock_quantity', '>', 0)
+                ->where('status', true);
+        })
+        ->get();
         
         return response()->json($companies);
     }

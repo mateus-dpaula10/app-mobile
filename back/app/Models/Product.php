@@ -12,13 +12,8 @@ class Product extends Model
         'price',
         'stock_quantity',
         'status',
-        'variations',
         'company_id',
         'category_id'
-    ];
-
-    protected $casts = [
-        'variations' => 'array'
     ];
 
     public function images()

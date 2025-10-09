@@ -52,55 +52,55 @@ export default function CustomerStores({ navigation }: Props) {
     const categories = [
         { 
             name: 'Supermercado', 
-            image: 'http://192.168.0.72:8000/storage/categories/supermercado.jpg'
+            image: 'http://192.168.0.79:8000/storage/categories/supermercado.jpg'
         },
         { 
             name: 'Padaria', 
-            image: 'http://192.168.0.72:8000/storage/categories/padaria.jpg'
+            image: 'http://192.168.0.79:8000/storage/categories/padaria.jpg'
         },
         { 
             name: 'Restaurante', 
-            image: 'http://192.168.0.72:8000/storage/categories/restaurante.jpg'
+            image: 'http://192.168.0.79:8000/storage/categories/restaurante.jpg'
         },
         { 
             name: 'Bebidas', 
-            image: 'http://192.168.0.72:8000/storage/categories/bebidas.jpg'
+            image: 'http://192.168.0.79:8000/storage/categories/bebidas.jpg'
         },
         { 
             name: 'Doces e Sobremesas', 
-            image: 'http://192.168.0.72:8000/storage/categories/sobremesas.jpg'
+            image: 'http://192.168.0.79:8000/storage/categories/sobremesas.jpg'
         },
         { 
             name: 'Farmácia', 
-            image: 'http://192.168.0.72:8000/storage/categories/farmacia.jpg'
+            image: 'http://192.168.0.79:8000/storage/categories/farmacia.jpg'
         },
         { 
             name: 'Pet Shop', 
-            image: 'http://192.168.0.72:8000/storage/categories/petshop.jpg'
+            image: 'http://192.168.0.79:8000/storage/categories/petshop.jpg'
         },
         { 
             name: 'Moda e Acessórios', 
-            image: 'http://192.168.0.72:8000/storage/categories/moda.jpg'
+            image: 'http://192.168.0.79:8000/storage/categories/moda.jpg'
         },
         { 
             name: 'Eletrônicos', 
-            image: 'http://192.168.0.72:8000/storage/categories/eletronicos.jpg'
+            image: 'http://192.168.0.79:8000/storage/categories/eletronicos.jpg'
         },
         { 
             name: 'Casa e Decoração', 
-            image: 'http://192.168.0.72:8000/storage/categories/casa_decoracao.jpg'
+            image: 'http://192.168.0.79:8000/storage/categories/casa_decoracao.jpg'
         },
         { 
             name: 'Saúde e Beleza', 
-            image: 'http://192.168.0.72:8000/storage/categories/beleza.jpg'
+            image: 'http://192.168.0.79:8000/storage/categories/beleza.jpg'
         },
         { 
             name: 'Esporte e Lazer', 
-            image: 'http://192.168.0.72:8000/storage/categories/esportes.jpg'
+            image: 'http://192.168.0.79:8000/storage/categories/esportes.jpg'
         },
         { 
             name: 'Livraria', 
-            image: 'http://192.168.0.72:8000/storage/categories/livraria.jpg'
+            image: 'http://192.168.0.79:8000/storage/categories/livraria.jpg'
         },
     ];
 
@@ -164,7 +164,7 @@ export default function CustomerStores({ navigation }: Props) {
             <VStack p={3} space={2} alignItems="center">
                 {store.logo && (
                     <Image
-                        source={{ uri: `http://192.168.0.72:8000/storage/${store.logo.replace(/^\/+/, '')}` }}
+                        source={{ uri: `http://192.168.0.79:8000/storage/${store.logo.replace(/^\/+/, '')}` }}
                         style={{ width: 80, height: 80, borderRadius: 10 }}
                         resizeMode="cover"
                     />

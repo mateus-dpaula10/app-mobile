@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
-import api from '../../services/api';
-import { FlatList, KeyboardAvoidingView, Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Box, Button, HStack, IconButton, Image, Input, Text, useToast, VStack } from 'native-base';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { 
+  FlatList, 
+  KeyboardAvoidingView, 
+  Platform, 
+  View, 
+  Text, 
+  Image, 
+  TouchableOpacity, 
+  StyleSheet 
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../../services/api';
 import { AxiosError } from 'axios';
 
 type ProductImage = {
@@ -39,31 +46,23 @@ type Store = {
 type CartItem = {
   product: Product;
   quantity: number;
-  selectedVariations?: Record<string, ProductVariation>;
+  selectedVariations: Record<string, ProductVariation>;
 };
 
-type RootStackParamList = {
-  CustomerStores: undefined;
-  CustomerStoresProducts: { store: Store };
-};
-
-type CustomerStoresProductsProps = NativeStackScreenProps<RootStackParamList, 'CustomerStoresProducts'>;
-
-export default function CustomerStoresProducts({ route }: CustomerStoresProductsProps) {
+export default function CustomerStoresProducts({ route }: any) {
   const { store } = route.params;
   const [cart, setCart] = useState<CartItem[]>([]);
-  const toast = useToast();
 
   const updateCart = (
     product: Product,
     delta: number,
-    selectedVariations?: Record<string, ProductVariation>
+    selectedVariations: Record<string, ProductVariation>
   ) => {
     setCart(prev => {
       const existing = prev.find(
         c =>
           c.product.id === product.id &&
-          JSON.stringify(c.selectedVariations || {}) === JSON.stringify(selectedVariations || {})
+          JSON.stringify(c.selectedVariations) === JSON.stringify(selectedVariations)
       );
 
       if (existing) {
@@ -72,13 +71,13 @@ export default function CustomerStoresProducts({ route }: CustomerStoresProducts
           return prev.filter(
             c =>
               !(c.product.id === product.id &&
-              JSON.stringify(c.selectedVariations || {}) === JSON.stringify(selectedVariations || {}))
+              JSON.stringify(c.selectedVariations) === JSON.stringify(selectedVariations))
           );
         }
         return prev.map(
           c =>
             c.product.id === product.id &&
-            JSON.stringify(c.selectedVariations || {}) === JSON.stringify(selectedVariations || {})
+            JSON.stringify(c.selectedVariations) === JSON.stringify(selectedVariations)
               ? { ...c, quantity: newQty }
               : c
         );
@@ -92,56 +91,48 @@ export default function CustomerStoresProducts({ route }: CustomerStoresProducts
 
   const addToCart = async () => {
     if (!cart.length) {
-        return toast.show({ title: 'Selecione produtos', duration: 2000 });
+      alert('Selecione produtos');
+      return;
     }
 
     try {
-        const token = await AsyncStorage.getItem('@token');
+      const token = await AsyncStorage.getItem('@token');
 
-        const companyIds = cart.map(c => c.product.company_id);
-        if ([...new Set(companyIds)].length > 1) {
-            return toast.show({
-                title: 'Atenção',
-                description: 'Só é possível adicionar produtos da mesma loja ao carrinho',
-                duration: 3000
-            });
-        }
+      const companyIds = cart.map(c => c.product.company_id);
+      if ([...new Set(companyIds)].length > 1) {
+        return alert('Só é possível adicionar produtos da mesma loja ao carrinho');
+      }
 
-        await api.post(
-            '/cart',
-            { 
-                products: cart.map(c => ({
-                    id: c.product.id,
-                    quantity: c.quantity,
-                    variation_ids: Object.values(c.selectedVariations || {}).map(v => Number(v.id))
-                }))
-            },
-            { headers: { Authorization: `Bearer ${token}` } }
-        );
+      await api.post(
+        '/cart',
+        { 
+          products: cart.map(c => ({
+            id: c.product.id,
+            quantity: c.quantity,
+            variation_ids: Object.values(c.selectedVariations).map(v => Number(v.id))
+          }))
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-        toast.show({ title: 'Produtos adicionados ao carrinho', duration: 3000 });
-        setCart([]);
+      alert('Produtos adicionados ao carrinho');
+      setCart([]);
     } catch (err: unknown) {
-        console.error(err);
-        let message = 'Não foi possível adicionar ao carrinho';
-        if (err instanceof AxiosError) message = err.response?.data?.message || message;
-        toast.show({ title: 'Erro', description: message, duration: 3000 });
+      console.error(err);
+      let message = 'Não foi possível adicionar ao carrinho';
+      if (err instanceof AxiosError) message = err.response?.data?.message || message;
+      alert(message);
     }
   };
 
   function ProductCard({
     product,
-    quantity,
-    onAdd,
-    onRemove
   }: {
     product: Product;
-    quantity: number;
-    onAdd: (selectedVariations?: Record<string, ProductVariation>) => void;
-    onRemove: () => void;
   }) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [selectedVariations, setSelectedVariations] = useState<Record<string, ProductVariation>>({});
+
     const outOfStock = product.stock_quantity <= 0;
 
     const prevImage = () => setCurrentIndex(i => (i - 1 + product.images.length) % product.images.length);
@@ -151,72 +142,102 @@ export default function CustomerStoresProducts({ route }: CustomerStoresProducts
       setSelectedVariations(prev => ({ ...prev, [variation.type]: variation }));
     };
 
+    const cartItem = cart.find(
+      c =>
+        c.product.id === product.id &&
+        JSON.stringify(c.selectedVariations) === JSON.stringify(selectedVariations)
+    );
+    const quantity = cartItem?.quantity || 0;
+
+    const variationsByType = product.variations?.reduce((acc, v) => {
+      if (!acc[v.type]) acc[v.type] = [];
+      acc[v.type].push(v);
+      return acc;
+    }, {} as Record<string, ProductVariation[]>);
+
+    const allVariationsSelected = variationsByType
+      ? Object.keys(variationsByType).every(type => selectedVariations[type])
+      : true;
+
     return (
-      <Box borderWidth={1} borderColor="gray.200" borderRadius="lg" overflow="hidden" bg="white" shadow={2} m={2}>
+      <View style={styles.card}>
         {product.images.length > 0 && (
-          <Box position="relative" width="100%" height={200}>
+          <View style={{ position: 'relative', width: '100%', height: 200 }}>
             <Image
-              source={{ uri: `http://192.168.0.72:8000/storage/${product.images[currentIndex].image_path}` }}
-              alt={product.name}
-              width="100%"
-              height="100%"
+              source={{ uri: `http://192.168.0.79:8000/storage/${product.images[currentIndex].image_path}` }}
+              style={{ width: '100%', height: '100%' }}
               resizeMode="cover"
             />
-            <HStack position="absolute" top="50%" left={0} right={0} justifyContent="space-between" px={2}>
-              <IconButton icon={<Ionicons name="chevron-back-circle" size={32} color="white" />} onPress={prevImage} />
-              <IconButton icon={<Ionicons name="chevron-forward-circle" size={32} color="white" />} onPress={nextImage} />
-            </HStack>
-          </Box>
+            <View style={styles.imageNav}>
+              <TouchableOpacity onPress={prevImage}>
+                <Ionicons name="chevron-back-circle" size={32} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={nextImage}>
+                <Ionicons name="chevron-forward-circle" size={32} color="white" />
+              </TouchableOpacity>
+            </View>
+          </View>
         )}
 
-        <VStack flex={1} p={3} space={2}>
-          <Text bold fontSize="md">{product.name}</Text>
-          {product.description && <Text fontSize="sm" color="gray.600" numberOfLines={2}>{product.description}</Text>}
-          <Text fontSize="sm" color="gray.800">R$ {Number(product.price).toFixed(2).replace('.', ',')}</Text>
+        <View style={{ padding: 12 }}>
+          <Text style={styles.title}>{product.name}</Text>
+          {product.description && <Text style={styles.description}>{product.description}</Text>}
+          <Text style={styles.price}>R$ {Number(product.price).toFixed(2).replace('.', ',')}</Text>
 
-          {product.variations && product.variations.length > 0 && (
-            <HStack flexWrap="wrap" space={2}>
-              {product.variations.map(v => (
-                <Button
-                  key={v.id}
-                  size="sm"
-                  variant={selectedVariations[v.type]?.id === v.id ? 'solid' : 'outline'}
-                  onPress={() => handleSelectVariation(v)}
-                >
-                  {v.type}: {v.value}
-                </Button>
-              ))}
-            </HStack>
+          {variationsByType && Object.entries(variationsByType).map(([type, vars]) => (
+            <View key={type} style={{ marginVertical: 6 }}>
+              <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>{type}</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                {vars.map(v => (
+                  <TouchableOpacity
+                    key={v.id}
+                    style={{
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                      borderWidth: 1,
+                      borderColor: '#007bff',
+                      borderRadius: 4,
+                      marginRight: 6,
+                      marginBottom: 6,
+                      backgroundColor: selectedVariations[type]?.id === v.id ? '#007bff' : 'white'
+                    }}
+                    onPress={() => handleSelectVariation(v)}
+                  >
+                    <Text style={{ color: selectedVariations[type]?.id === v.id ? 'white' : '#007bff' }}>{v.value}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          ))}
+
+          {outOfStock && <Text style={styles.outOfStock}>Esgotado</Text>}
+
+          {!outOfStock && allVariationsSelected && (
+            <View style={styles.qtyRow}>
+              <TouchableOpacity onPress={() => updateCart(product, -1, selectedVariations)} disabled={quantity <= 0}>
+                <Text style={{ fontSize: 24, color: quantity <= 0 ? '#aaa' : 'gray' }}>−</Text>
+              </TouchableOpacity>
+              <Text style={{ marginHorizontal: 12, fontSize: 16 }}>{quantity}</Text>
+              <TouchableOpacity 
+                onPress={() => updateCart(product, 1, selectedVariations)}
+                disabled={quantity >= product.stock_quantity}
+              >
+                <Text style={{ fontSize: 24, color: quantity >= product.stock_quantity ? '#aaa' : 'blue' }}>+</Text>
+              </TouchableOpacity>
+            </View>
           )}
 
-          {outOfStock ? (
-            <Text fontSize="sm" color="red.500" bold>Esgotado</Text>
-          ) : (
-            <HStack alignItems="center" space={2}>
-              <IconButton icon={<Ionicons name="remove-circle-outline" size={24} color="gray" />} onPress={onRemove} isDisabled={quantity <= 0} />
-              <Input value={quantity.toString()} isReadOnly textAlign="center" width={12} height={10} fontSize="md" />
-              <IconButton 
-                icon={<Ionicons name="add-circle-outline" size={24} color="blue" />} 
-                onPress={() => onAdd(selectedVariations)} 
-                isDisabled={(quantity || 0) >= (product.stock_quantity || 0)}
-            />
-            </HStack>
-          )}
-
-          <Button
-            mt={2}
-            size="sm"
-            colorScheme="blue"
-            onPress={() => onAdd(selectedVariations)}
-            isDisabled={
-              outOfStock ||
-              Object.keys(selectedVariations).length < new Set(product.variations?.map(v => v.type) || []).size
-            }
+          <TouchableOpacity
+            style={[styles.addBtn, (!allVariationsSelected || outOfStock) && { backgroundColor: 'lightgray' }]}
+            onPress={() => updateCart(product, 1, selectedVariations)}
+            disabled={!allVariationsSelected || outOfStock}
           >
-            {outOfStock ? 'Indisponível' : 'Adicionar ao carrinho'}
-          </Button>
-        </VStack>
-      </Box>
+            <Text style={styles.addBtnText}>
+              {outOfStock ? 'Indisponível' : 'Adicionar ao carrinho'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     );
   }
 
@@ -228,36 +249,20 @@ export default function CustomerStoresProducts({ route }: CustomerStoresProducts
     >
       <FlatList
         ListHeaderComponent={
-          <VStack mt={10} px={4}>
-            <Text bold fontSize="xl" mb={4}>{store.final_name}</Text>
-          </VStack>
+          <View style={{ marginTop: 40, paddingHorizontal: 16 }}>
+            <Text style={styles.storeTitle}>{store.final_name}</Text>
+          </View>
         }
         data={store.products}
         keyExtractor={p => p.id.toString()}
-        renderItem={({ item }) => {
-          const cartItem = cart.find(
-            c =>
-              c.product.id === item.id
-          );
-          const quantity = cartItem?.quantity || 0;
-          return (
-            <ProductCard
-              product={item}
-              quantity={quantity}
-              onAdd={(selectedVariations) => updateCart(item, 1, selectedVariations)}
-              onRemove={() => updateCart(item, -1)}
-            />
-          );
-        }}
+        renderItem={({ item }) => <ProductCard product={item} />}
         ListFooterComponent={
           cart.length > 0 ? (
-            <Button mt={4} mx={4} mb={8} onPress={addToCart}>
-              <HStack space={1} alignItems="center">
-                <Text color="white">Adicionar</Text>
-                <Text color="white">{cart.reduce((sum, c) => sum + c.quantity, 0)}</Text>
-                <Text color="white">produto(s) ao carrinho</Text>
-              </HStack>
-            </Button>
+            <TouchableOpacity style={styles.footerBtn} onPress={addToCart}>
+              <Text style={styles.footerBtnText}>
+                Adicionar {cart.reduce((sum, c) => sum + c.quantity, 0)} produto(s) ao carrinho
+              </Text>
+            </TouchableOpacity>
           ) : null
         }
         contentContainerStyle={{ paddingBottom: 40 }}
@@ -266,3 +271,34 @@ export default function CustomerStoresProducts({ route }: CustomerStoresProducts
     </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    margin: 8,
+    overflow: 'hidden',
+    elevation: 2
+  },
+  imageNav: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8
+  },
+  title: { fontWeight: 'bold', fontSize: 16 },
+  description: { fontSize: 12, color: '#666' },
+  price: { fontSize: 14, fontWeight: 'bold', marginVertical: 4 },
+  outOfStock: { color: 'red', fontWeight: 'bold', marginTop: 6 },
+  qtyRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
+  addBtn: { backgroundColor: 'blue', padding: 10, borderRadius: 6, marginTop: 8, alignItems: 'center' },
+  addBtnText: { color: 'white', fontWeight: 'bold' },
+  storeTitle: { fontWeight: 'bold', fontSize: 20, marginBottom: 12 },
+  footerBtn: { backgroundColor: 'blue', margin: 16, padding: 14, borderRadius: 8, alignItems: 'center' },
+  footerBtnText: { color: 'white', fontWeight: 'bold' }
+});

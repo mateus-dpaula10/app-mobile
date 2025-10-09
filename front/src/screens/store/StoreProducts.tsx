@@ -101,6 +101,26 @@ export default function StoreProducts() {
     const token = await AsyncStorage.getItem('@token');
     if (!token) return;
 
+    if (!name.trim()) {
+      alert("O nome do produto é obrigatório");
+      return;
+    }
+
+    if (!category.trim()) {
+      alert("Selecione ou digite uma categoria");
+      return;
+    }
+
+    if (!price || isNaN(Number(price))) {
+      alert("Digite um preço válido");
+      return;
+    }
+
+    if (!stock || isNaN(Number(stock))) {
+      alert("Digite a quantidade em estoque");
+      return;
+    }
+
     const formData = new FormData();
     formData.append('name', name);
     formData.append('description', description);
@@ -130,16 +150,18 @@ export default function StoreProducts() {
           headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` },
         });
         setProducts((prev) => prev.map(p => (p.id === editingId ? response.data : p)));
+        alert("Produto atualizado com sucesso!");
       } else {
         const response = await api.post('/products', formData, {
           headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` },
         });
         setProducts((prev) => [...prev, response.data]);
+          alert("Produto cadastrado com sucesso!");
       }
       resetForm();
     } catch (err: any) {
       console.error(err);
-      alert('Erro ao cadastrar/atualizar produto');
+      alert('Erro ao cadastrar/atualizar produto. Tente novamente.');
     } finally {
       setSaving(false);
     }
@@ -165,11 +187,18 @@ export default function StoreProducts() {
     try {
       await api.delete(`/products/${id}`, { headers: { Authorization: `Bearer ${token}` } });
       setProducts((prev) => prev.filter(p => p.id !== id));
+      alert("Produto excluído com sucesso!");
     } catch (err) {
       console.error(err);
-      alert('Erro ao excluir produto');
+      alert('Erro ao excluir produto. Tente novamente.');
     }
   };
+
+  useEffect(() => {
+    if (categories.length === 1 && !category) {
+      setCategory(categories[0]);
+    }
+  }, [categories, category])
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -199,7 +228,7 @@ export default function StoreProducts() {
     loadCategories();
   }, []);
 
-  const getImageUrl = (path: string) => `http://192.168.0.72:8000/storage/${path}`;
+  const getImageUrl = (path: string) => `http://192.168.0.79:8000/storage/${path}`;
   const { width } = useWindowDimensions();
   const numColumns = width < 500 ? 1 : width < 900 ? 2 : 3;
 
