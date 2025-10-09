@@ -94,7 +94,7 @@ export default function StoreProfile() {
 
         if (company.logo) {
           setLogo({
-            uri: `http://192.168.0.79:8000/storage/${company.logo}`,
+            uri: `http://192.168.0.72:8000/storage/${company.logo}`,
             name: 'logo.jpg',
             type: 'image/jpeg',
             isNew: false
