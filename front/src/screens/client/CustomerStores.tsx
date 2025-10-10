@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import api from '../../services/api';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useIsFocused } from '@react-navigation/native';
 
 type ProductImage = { id: number; product_id: number; image_path: string; };
 type Product = { id: number; name: string; description: string; price: number; stock_quantity: number; company_id: number; images: ProductImage[]; };
@@ -19,34 +20,39 @@ export default function CustomerStores({ navigation }: Props) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const categories = [
-    { name: 'Supermercado', image: 'http://192.168.0.79:8000/storage/categories/supermercado.jpg' },
-    { name: 'Padaria', image: 'http://192.168.0.79:8000/storage/categories/padaria.jpg' },
-    { name: 'Restaurante', image: 'http://192.168.0.79:8000/storage/categories/restaurante.jpg' },
-    { name: 'Bebidas', image: 'http://192.168.0.79:8000/storage/categories/bebidas.jpg' },
-    { name: 'Doces e Sobremesas', image: 'http://192.168.0.79:8000/storage/categories/sobremesas.jpg' },
-    { name: 'Farmácia', image: 'http://192.168.0.79:8000/storage/categories/farmacia.jpg' },
-    { name: 'Pet Shop', image: 'http://192.168.0.79:8000/storage/categories/petshop.jpg' },
-    { name: 'Moda e Acessórios', image: 'http://192.168.0.79:8000/storage/categories/moda.jpg' },
-    { name: 'Eletrônicos', image: 'http://192.168.0.79:8000/storage/categories/eletronicos.jpg' },
-    { name: 'Casa e Decoração', image: 'http://192.168.0.79:8000/storage/categories/casa_decoracao.jpg' },
-    { name: 'Saúde e Beleza', image: 'http://192.168.0.79:8000/storage/categories/beleza.jpg' },
-    { name: 'Esporte e Lazer', image: 'http://192.168.0.79:8000/storage/categories/esportes.jpg' },
-    { name: 'Livraria', image: 'http://192.168.0.79:8000/storage/categories/livraria.jpg' },
+    { name: 'Supermercado', image: 'http://192.168.0.72:8000/storage/categories/supermercado.jpg' },
+    { name: 'Padaria', image: 'http://192.168.0.72:8000/storage/categories/padaria.jpg' },
+    { name: 'Restaurante', image: 'http://192.168.0.72:8000/storage/categories/restaurante.jpg' },
+    { name: 'Bebidas', image: 'http://192.168.0.72:8000/storage/categories/bebidas.jpg' },
+    { name: 'Doces e Sobremesas', image: 'http://192.168.0.72:8000/storage/categories/sobremesas.jpg' },
+    { name: 'Farmácia', image: 'http://192.168.0.72:8000/storage/categories/farmacia.jpg' },
+    { name: 'Pet Shop', image: 'http://192.168.0.72:8000/storage/categories/petshop.jpg' },
+    { name: 'Moda e Acessórios', image: 'http://192.168.0.72:8000/storage/categories/moda.jpg' },
+    { name: 'Eletrônicos', image: 'http://192.168.0.72:8000/storage/categories/eletronicos.jpg' },
+    { name: 'Casa e Decoração', image: 'http://192.168.0.72:8000/storage/categories/casa_decoracao.jpg' },
+    { name: 'Saúde e Beleza', image: 'http://192.168.0.72:8000/storage/categories/beleza.jpg' },
+    { name: 'Esporte e Lazer', image: 'http://192.168.0.72:8000/storage/categories/esportes.jpg' },
+    { name: 'Livraria', image: 'http://192.168.0.72:8000/storage/categories/livraria.jpg' },
   ];
 
+  const fetchStores = async () => {
+    try {
+      const res = await api.get('/companies-with-products');
+      setStores(res.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isFocused = useIsFocused();
+
   useEffect(() => {
-    const fetchStores = async () => {
-      try {
-        const res = await api.get('/companies-with-products');
-        setStores(res.data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStores();
-  }, []);
+    if (isFocused) {
+      fetchStores();
+    }
+  }, [isFocused]);
 
   const filteredStores = stores.filter(store => {
     const searchLower = search.toLowerCase();
@@ -68,7 +74,7 @@ export default function CustomerStores({ navigation }: Props) {
 
   const renderStoreCard = (store: Store) => (
     <View key={store.id} style={styles.storeCard}>
-      {store.logo && <Image source={{ uri: `http://192.168.0.79:8000/storage/${store.logo.replace(/^\/+/, '')}` }} style={styles.storeLogo} />}
+      {store.logo && <Image source={{ uri: `http://192.168.0.72:8000/storage/${store.logo.replace(/^\/+/, '')}` }} style={styles.storeLogo} />}
       <Text style={styles.storeName}>{store.final_name}</Text>
       {store.phone && <Text style={styles.storeInfo}>Telefone: {formatPhone(store.phone)}</Text>}
       {store.address && <Text style={styles.storeInfo}>Endereço: {store.address}</Text>}

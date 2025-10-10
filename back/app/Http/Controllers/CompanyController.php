@@ -221,13 +221,13 @@ class CompanyController extends Controller
     {
         $companies = Company::with(['products' => function ($query) {
             $query->where('stock_quantity', '>', 0)
-                ->where('status', true)
-                ->with(['images', 'variations']);
+                ->where('status', 'ativo')
+                ->with(['images', 'variations', 'category']);
         }])
         ->where('active', true)
         ->whereHas('products', function ($query) {
             $query->where('stock_quantity', '>', 0)
-                ->where('status', true);
+                ->where('status', 'ativo');
         })
         ->get();
         

@@ -209,17 +209,21 @@ class ProductController extends Controller
         return response()->json(['message' => 'Produto removido']);
     }
 
-    public function getCart(Request $request) {
+    public function getCart(Request $request)
+    {
         $authUser = auth()->user();
 
         $cartQuery = Cart::query();
         if ($authUser->role === 'client') {
             $cartQuery->where('user_id', $authUser->id);
         } else {
-            $cartQuery->where('company_id', $company_id);
+            $cartQuery->where('company_id', $authUser->company_id);
         }
 
-        $cart = $cartQuery->with('items.product.images')->first();
+        $cart = $cartQuery->with([
+            'items.product.images',
+            'items.variations', 
+        ])->first();
 
         if (!$cart) {
             return response()->json([
@@ -232,35 +236,44 @@ class ProductController extends Controller
             return $sum + ($item->quantity * $item->price);
         }, 0);
 
+        $items = $cart->items->map(function ($item) {
+            $variationKey = $item->variations->map(fn($v) => "{$v->type}:{$v->value}")->implode(' | ');
+
+            return [
+                'id'        => $item->id,
+                'product_id'=> $item->product->id,
+                'product'   => [
+                    'id'             => $item->product->id,
+                    'name'           => $item->product->name,
+                    'description'    => $item->product->description,
+                    'price'          => $item->product->price,
+                    'stock_quantity' => $item->product->stock_quantity,
+                    'company_id'     => $item->product->company_id,
+                    'images'         => $item->product->images->map(fn($img) => [
+                        'id'         => $img->id,
+                        'image_path' => $img->image_path,
+                    ]),
+                ],
+                'quantity'   => $item->quantity,
+                'price'      => $item->price,
+                'subtotal'   => $item->quantity * $item->price,
+                'variation_key' => $variationKey,
+                'variations' => $item->variations->map(fn($v) => [
+                    'id'    => $v->id,
+                    'type'  => $v->type,
+                    'value' => $v->value,
+                ]),
+            ];
+        });
+
         return response()->json([
             'message' => 'Carrinho recuperado com sucesso',
-            'cart'    => [
+            'cart' => [
                 'id'         => $cart->id,
                 'created_at' => $cart->created_at,
-                'items'      => $cart->items->map(function ($item) {
-                    return [
-                        'id'      => $item->id,
-                        'product' => [
-                            'id'             => $item->product->id,
-                            'name'           => $item->product->name,
-                            'description'    => $item->product->description,
-                            'price'          => $item->product->price,
-                            'stock_quantity' => $item->product->stock_quantity,
-                            'company_id'     => $item->product->company_id,
-                            'images'         => $item->product->images->map(function($img) {
-                                return [
-                                    'id' => $img->id,
-                                    'image_path' => $img->image_path
-                                ];
-                            })
-                        ],
-                        'quantity' => $item->quantity,
-                        'price'    => $item->price,
-                        'subtotal' => $item->quantity * $item->price
-                    ];
-                }),
-                'total' => $total
-            ]
+                'items'      => $items,
+                'total'      => $total,
+            ],
         ]);
     }
 
@@ -296,21 +309,16 @@ class ProductController extends Controller
             $cartQuery->where('company_id', $authUser->company_id);
         }
 
-        $cart = $cartQuery->first();
-
-        if (!$cart) {
-            $cart = Cart::create([
-                'user_id' => $authUser->role === 'client' ? $authUser->id : null,
-                'company_id' => $authUser->role !== 'client' ? $authUser->company_id : null,
-            ]);
-        }
+        $cart = $cartQuery->firstOrCreate([
+            'user_id' => $authUser->role === 'client' ? $authUser->id : null,
+            'company_id' => $authUser->role !== 'client' ? $authUser->company_id : null,
+        ]);
 
         $existingCompanyId = $cart->items()->exists() ? $cart->items()->first()->product->company_id : null;
 
-        $cartItemsData = [];
-
         foreach ($request->products as $p) {
             $product = Product::find($p['id']);
+            $variationIds = $p['variation_ids'] ?? [];
 
             if (!$product) {
                 return response()->json([
@@ -318,52 +326,43 @@ class ProductController extends Controller
                 ], 404);
             }
 
-            $existingCartItem = $cart->items()->where('product_id', $product->id)->first();
-            $currentQtyInCart = $existingCartItem ? $existingCartItem->quantity : 0;
-            $newQty = $currentQtyInCart + $p['quantity'];
+            $existingItem = $cart->items()
+                ->where('product_id', $product->id)
+                ->whereHas('variations', function ($q) use ($variationIds) {
+                    $q->whereIn('product_variations.id', $variationIds);
+                }, '=', count($variationIds))
+                ->first();
 
-            if ($product->stock_quantity < $newQty) {
+            $newQuantity = $p['quantity'];
+
+            if ($existingItem) {
+                $newQuantity += $existingItem->quantity;
+            }
+
+            if ($product->stock_quantity < $newQuantity) {
                 return response()->json([
                     'message' => "Produto {$product->name} não possui estoque suficiente"
                 ], 422);
             }
 
-            $cartItemsData[] = [
-                'product' => $product,
-                'quantity' => $p['quantity'],
-                'price' => $product->price,
-                'variation_ids' => $p['variation_ids'] ?? []
-            ];
-        }
-
-        if ($authUser->role === 'client' && $existingCompanyId) {
-            $newCompanyId = $cartItemsData[0]['product']->company_id;
-            if ($existingCompanyId !== $newCompanyId) {
-                $cart->items()->delete();
-            }
-        }
-        
-        foreach ($cartItemsData as $item) {
-            $cartItem = $cart->items()->where('product_id', $item['product']->id)->first();
-
-            if ($cartItem) {
-                $cartItem->update(['quantity' => $cartItem->quantity + $item['quantity']]);
+            if ($existingItem) {
+                $existingItem->update(['quantity' => $newQuantity]);
             } else {
-                $cartItem = $cart->items()->create([
-                    'product_id' => $item['product']->id,
-                    'quantity'   => $item['quantity'],
-                    'price'      => $item['price'],
+                $newItem = $cart->items()->create([
+                    'product_id' => $product->id,
+                    'quantity'   => $p['quantity'],
+                    'price'      => $product->price,
                 ]);
-            }
 
-            if (!empty($item['variation_ids'])) {
-                $cartItem->variations()->sync($item['variation_ids']); 
+                if (!empty($variationIds)) {
+                    $newItem->variations()->sync($variationIds);
+                }
             }
         }
 
         return response()->json([
             'message' => 'Produtos adicionados ao carrinho com sucesso',
-            'cart' => $cart->load('items.product', 'items.variations')
+            'cart' => $cart->load('items.product.images', 'items.variations')
         ]);
     }
 

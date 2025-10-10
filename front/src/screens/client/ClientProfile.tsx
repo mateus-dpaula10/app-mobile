@@ -3,7 +3,7 @@ import { Box, Button, HStack, IconButton, Image, Input, Text, useToast, VStack }
 import LayoutWithSidebar from '../../components/LayoutWithSidebar';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
-import { Platform } from 'react-native';
+import { KeyboardAvoidingView, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -85,8 +85,8 @@ export default function ClientProfile() {
 
             if (Platform.OS !== 'web' && asset.uri.startsWith('content://')) {
                 const fileName = asset.uri.split('/').pop();
-                const destPath = `${FileSystem.cacheDirectory}${fileName}`;
-                await FileSystem.copyAsync({ from: asset.uri, to: destPath });
+                const destPath = `${(FileSystem as any).cacheDirectory}${fileName}`;
+                await (FileSystem as any).copyAsync({ from: asset.uri, to: destPath });
                 uri = destPath;
             }
 
@@ -199,71 +199,73 @@ export default function ClientProfile() {
     };
 
     return (
-        <LayoutWithSidebar>
-            <VStack mt={10} space={3}>
-                <Text bold fontSize="xl">Perfil do Cliente</Text>
+        <KeyboardAvoidingView
+            style={{ flex: 1, padding: 16 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+        >
+            <Text bold fontSize="xl">Perfil do Cliente</Text>
 
-                <Input placeholder="Nome" value={name} onChangeText={setName} />
-                <Input placeholder="E-mail" value={email} onChangeText={setEmail} />
+            <Input placeholder="Nome" value={name} onChangeText={setName} />
+            <Input placeholder="E-mail" value={email} onChangeText={setEmail} />
 
-                <Input
-                    placeholder="Nova senha"
-                    value={password}
-                    secureTextEntry
-                    borderColor={
-                        (password || '').length > 0 && !passwordValid ? 'red.500' : 'gray.300'
-                    }
-                    onChangeText={(v) => {
-                        setPassword(v);
-                        setPasswordValid(isStrongPassword(v));
-                    }}
-                />
-                {(password || '').length > 0 && !passwordValid && (
-                    <Text color="red.500" fontSize="xs">
-                        A senha deve conter ao menos 8 caracteres, com letra maiúscula, minúscula, número e símbolo.
-                    </Text>
-                )}
-                <Input
-                    placeholder="Confirme a nova senha"
-                    value={passwordConfirmation}
-                    onChangeText={setPasswordConfirmation}
-                    secureTextEntry
-                />
+            <Input
+                placeholder="Nova senha"
+                value={password}
+                secureTextEntry
+                borderColor={
+                    (password || '').length > 0 && !passwordValid ? 'red.500' : 'gray.300'
+                }
+                onChangeText={(v) => {
+                    setPassword(v);
+                    setPasswordValid(isStrongPassword(v));
+                }}
+            />
+            {(password || '').length > 0 && !passwordValid && (
+                <Text color="red.500" fontSize="xs">
+                    A senha deve conter ao menos 8 caracteres, com letra maiúscula, minúscula, número e símbolo.
+                </Text>
+            )}
+            <Input
+                placeholder="Confirme a nova senha"
+                value={passwordConfirmation}
+                onChangeText={setPasswordConfirmation}
+                secureTextEntry
+            />
 
-                <Button mt={2} onPress={pickImage}>
-                    Selecionar foto de perfil
-                </Button>
-                {photo && <Image source={{ uri: photo.uri }} alt="Foto de perfil" size="md" mt={2} />}
-                
-                <Text bold mt={5}>Endereços de entrega</Text>
-                {addresses.map((addr, index) => (
-                    <Box key={index} p={2} borderWidth={1} borderColor="gray.300" borderRadius="md" mb={2}>
-                        <HStack justifyContent="space-between" alignItems="center">
-                            <VStack>
-                                <Text bold>{addr.label}</Text>
-                                <Text>{addr.street}, {addr.number} {addr.complement || ''} - {addr.neighborhood}, {addr.city} / {addr.state}</Text>
-                            </VStack>
-                            <IconButton icon={<Ionicons name="trash-outline" size={20} color="red" />} onPress={() => removeAddress(index)} />
-                        </HStack>
-                    </Box>
-                ))}
+            <Button mt={2} onPress={pickImage}>
+                Selecionar foto de perfil
+            </Button>
+            {photo && <Image source={{ uri: photo.uri }} alt="Foto de perfil" size="md" mt={2} />}
+            
+            <Text bold mt={5}>Endereços de entrega</Text>
+            {addresses.map((addr, index) => (
+                <Box key={index} p={2} borderWidth={1} borderColor="gray.300" borderRadius="md" mb={2}>
+                    <HStack justifyContent="space-between" alignItems="center">
+                        <VStack>
+                            <Text bold>{addr.label}</Text>
+                            <Text>{addr.street}, {addr.number} {addr.complement || ''} - {addr.neighborhood}, {addr.city} / {addr.state}</Text>
+                        </VStack>
+                        <IconButton icon={<Ionicons name="trash-outline" size={20} color="red" />} onPress={() => removeAddress(index)} />
+                    </HStack>
+                </Box>
+            ))}
 
-                <Input placeholder="Apelido do endereço" value={newAddress.label} onChangeText={v => setNewAddress(prev => ({ ...prev, label: v }))} />
-                <Input placeholder="CEP" value={newAddress.cep} onChangeText={v => setNewAddress(prev => ({ ...prev, cep: v }))} onBlur={() => fetchAddressByCep(newAddress.cep)} />
-                <Input placeholder="Rua" value={newAddress.street} isDisabled />
-                <Input placeholder="Bairro" value={newAddress.neighborhood} isDisabled />
-                <Input placeholder="Cidade" value={newAddress.city} isDisabled />
-                <Input placeholder="Estado" value={newAddress.state} isDisabled />
-                <Input placeholder="Número" value={newAddress.number} onChangeText={v => setNewAddress(prev => ({ ...prev, number: v }))} />
-                <Input placeholder="Complemento" value={newAddress.complement} onChangeText={v => setNewAddress(prev => ({ ...prev, complement: v }))} />
-                <Input placeholder="Observações" value={newAddress.note} onChangeText={v => setNewAddress(prev => ({ ...prev, note: v }))} />
+            <Input placeholder="Apelido do endereço" value={newAddress.label} onChangeText={v => setNewAddress(prev => ({ ...prev, label: v }))} />
+            <Input placeholder="CEP" value={newAddress.cep} onChangeText={v => setNewAddress(prev => ({ ...prev, cep: v }))} onBlur={() => fetchAddressByCep(newAddress.cep)} />
+            <Input placeholder="Rua" value={newAddress.street} isDisabled />
+            <Input placeholder="Bairro" value={newAddress.neighborhood} isDisabled />
+            <Input placeholder="Cidade" value={newAddress.city} isDisabled />
+            <Input placeholder="Estado" value={newAddress.state} isDisabled />
+            <Input placeholder="Número" value={newAddress.number} onChangeText={v => setNewAddress(prev => ({ ...prev, number: v }))} />
+            <Input placeholder="Complemento" value={newAddress.complement} onChangeText={v => setNewAddress(prev => ({ ...prev, complement: v }))} />
+            <Input placeholder="Observações" value={newAddress.note} onChangeText={v => setNewAddress(prev => ({ ...prev, note: v }))} />
 
-                <Button mt={2} onPress={addAddress}>Adicionar endereço</Button>
+            <Button mt={2} onPress={addAddress}>Adicionar endereço</Button>
 
-                <Button mt={5} onPress={handleSave} isDisabled={!user}>
-                    Salvar perfil
-                </Button>
-            </VStack>
-        </LayoutWithSidebar>
+            <Button mt={5} onPress={handleSave} isDisabled={!user}>
+                Salvar perfil
+            </Button>
+        </KeyboardAvoidingView>
     );
 }

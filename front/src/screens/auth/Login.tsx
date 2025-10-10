@@ -37,6 +37,11 @@ export default function LoginScreen() {
     try {
       const response = await api.post("/login", { email, password });
       const { user, access_token } = response.data;
+      
+      if (!user || !access_token) {
+        throw new Error("Resposta da API está incompleta.");
+      }
+
       await login(user, access_token);
     } catch (err: any) {
       console.log(err.response?.data || err.message);

@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
-import { 
-  FlatList, 
-  KeyboardAvoidingView, 
-  Platform, 
-  View, 
-  Text, 
-  Image, 
-  TouchableOpacity, 
-  StyleSheet 
+import React, { useState, useMemo } from 'react';
+import {
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -26,13 +26,21 @@ type ProductVariation = {
   value: string;
 };
 
+type Category = {
+  id: number;
+  name: string;
+};
+
 type Product = {
   id: number;
   name: string;
   description?: string;
   price: number;
   stock_quantity: number;
+  status: 'ativo' | 'em_falta' | 'oculto';
   company_id: number;
+  category_id?: number;
+  category?: Category;
   images: ProductImage[];
   variations?: ProductVariation[];
 };
@@ -52,6 +60,34 @@ type CartItem = {
 export default function CustomerStoresProducts({ route }: any) {
   const { store } = route.params;
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [sortBy, setSortBy] = useState<'name' | 'price' | null>(null);
+
+  const categories = useMemo((): Category[] => {
+    const unique = new Map<number, Category>();
+    store.products.forEach((p: Product) => {
+      if (p.category) {
+        unique.set(p.category.id, p.category);
+      }
+    });
+    return Array.from(unique.values());
+  }, [store.products]);
+
+  const filteredProducts = useMemo(() => {
+    let prods = [...store.products];
+
+    if (selectedCategory) {
+      prods = prods.filter(p => p.category_id === selectedCategory.id);
+    }
+
+    if (sortBy === 'name') {
+      prods.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortBy === 'price') {
+      prods.sort((a, b) => a.price - b.price);
+    }
+
+    return prods;
+  }, [store.products, selectedCategory, sortBy]);
 
   const updateCart = (
     product: Product,
@@ -70,16 +106,17 @@ export default function CustomerStoresProducts({ route }: any) {
         if (newQty <= 0) {
           return prev.filter(
             c =>
-              !(c.product.id === product.id &&
-              JSON.stringify(c.selectedVariations) === JSON.stringify(selectedVariations))
+              !(
+                c.product.id === product.id &&
+                JSON.stringify(c.selectedVariations) === JSON.stringify(selectedVariations)
+              )
           );
         }
-        return prev.map(
-          c =>
-            c.product.id === product.id &&
-            JSON.stringify(c.selectedVariations) === JSON.stringify(selectedVariations)
-              ? { ...c, quantity: newQty }
-              : c
+        return prev.map(c =>
+          c.product.id === product.id &&
+          JSON.stringify(c.selectedVariations) === JSON.stringify(selectedVariations)
+            ? { ...c, quantity: newQty }
+            : c
         );
       } else if (delta > 0) {
         return [...prev, { product, quantity: delta, selectedVariations }];
@@ -105,12 +142,12 @@ export default function CustomerStoresProducts({ route }: any) {
 
       await api.post(
         '/cart',
-        { 
+        {
           products: cart.map(c => ({
             id: c.product.id,
             quantity: c.quantity,
-            variation_ids: Object.values(c.selectedVariations).map(v => Number(v.id))
-          }))
+            variation_ids: Object.values(c.selectedVariations).map(v => Number(v.id)),
+          })),
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -125,18 +162,18 @@ export default function CustomerStoresProducts({ route }: any) {
     }
   };
 
-  function ProductCard({
-    product,
-  }: {
-    product: Product;
-  }) {
+  function ProductCard({ product }: { product: Product }) {
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [selectedVariations, setSelectedVariations] = useState<Record<string, ProductVariation>>({});
+    const [selectedVariations, setSelectedVariations] = useState<
+      Record<string, ProductVariation>
+    >({});
 
     const outOfStock = product.stock_quantity <= 0;
 
-    const prevImage = () => setCurrentIndex(i => (i - 1 + product.images.length) % product.images.length);
-    const nextImage = () => setCurrentIndex(i => (i + 1) % product.images.length);
+    const prevImage = () =>
+      setCurrentIndex(i => (i - 1 + product.images.length) % product.images.length);
+    const nextImage = () =>
+      setCurrentIndex(i => (i + 1) % product.images.length);
 
     const handleSelectVariation = (variation: ProductVariation) => {
       setSelectedVariations(prev => ({ ...prev, [variation.type]: variation }));
@@ -164,7 +201,9 @@ export default function CustomerStoresProducts({ route }: any) {
         {product.images.length > 0 && (
           <View style={{ position: 'relative', width: '100%', height: 200 }}>
             <Image
-              source={{ uri: `http://192.168.0.79:8000/storage/${product.images[currentIndex].image_path}` }}
+              source={{
+                uri: `http://192.168.0.72:8000/storage/${product.images[currentIndex].image_path}`,
+              }}
               style={{ width: '100%', height: '100%' }}
               resizeMode="cover"
             />
@@ -181,54 +220,82 @@ export default function CustomerStoresProducts({ route }: any) {
 
         <View style={{ padding: 12 }}>
           <Text style={styles.title}>{product.name}</Text>
-          {product.description && <Text style={styles.description}>{product.description}</Text>}
-          <Text style={styles.price}>R$ {Number(product.price).toFixed(2).replace('.', ',')}</Text>
+          {product.description && (
+            <Text style={styles.description}>{product.description}</Text>
+          )}
+          <Text style={styles.price}>
+            R$ {Number(product.price).toFixed(2).replace('.', ',')}
+          </Text>
 
-          {variationsByType && Object.entries(variationsByType).map(([type, vars]) => (
-            <View key={type} style={{ marginVertical: 6 }}>
-              <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>{type}</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                {vars.map(v => (
-                  <TouchableOpacity
-                    key={v.id}
-                    style={{
-                      paddingHorizontal: 8,
-                      paddingVertical: 4,
-                      borderWidth: 1,
-                      borderColor: '#007bff',
-                      borderRadius: 4,
-                      marginRight: 6,
-                      marginBottom: 6,
-                      backgroundColor: selectedVariations[type]?.id === v.id ? '#007bff' : 'white'
-                    }}
-                    onPress={() => handleSelectVariation(v)}
-                  >
-                    <Text style={{ color: selectedVariations[type]?.id === v.id ? 'white' : '#007bff' }}>{v.value}</Text>
-                  </TouchableOpacity>
-                ))}
+          {variationsByType &&
+            Object.entries(variationsByType).map(([type, vars]) => (
+              <View key={type} style={{ marginVertical: 6 }}>
+                <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>{type}</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                  {vars.map(v => (
+                    <TouchableOpacity
+                      key={v.id}
+                      style={{
+                        paddingHorizontal: 8,
+                        paddingVertical: 4,
+                        borderWidth: 1,
+                        borderColor: '#007bff',
+                        borderRadius: 4,
+                        marginRight: 6,
+                        marginBottom: 6,
+                        backgroundColor:
+                          selectedVariations[type]?.id === v.id ? '#007bff' : 'white',
+                      }}
+                      onPress={() => handleSelectVariation(v)}
+                    >
+                      <Text
+                        style={{
+                          color:
+                            selectedVariations[type]?.id === v.id ? 'white' : '#007bff',
+                        }}
+                      >
+                        {v.value}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
-            </View>
-          ))}
+            ))}
 
           {outOfStock && <Text style={styles.outOfStock}>Esgotado</Text>}
 
           {!outOfStock && allVariationsSelected && (
             <View style={styles.qtyRow}>
-              <TouchableOpacity onPress={() => updateCart(product, -1, selectedVariations)} disabled={quantity <= 0}>
-                <Text style={{ fontSize: 24, color: quantity <= 0 ? '#aaa' : 'gray' }}>−</Text>
+              <TouchableOpacity
+                onPress={() => updateCart(product, -1, selectedVariations)}
+                disabled={quantity <= 0}
+              >
+                <Text style={{ fontSize: 24, color: quantity <= 0 ? '#aaa' : 'gray' }}>
+                  −
+                </Text>
               </TouchableOpacity>
               <Text style={{ marginHorizontal: 12, fontSize: 16 }}>{quantity}</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => updateCart(product, 1, selectedVariations)}
                 disabled={quantity >= product.stock_quantity}
               >
-                <Text style={{ fontSize: 24, color: quantity >= product.stock_quantity ? '#aaa' : 'blue' }}>+</Text>
+                <Text
+                  style={{
+                    fontSize: 24,
+                    color: quantity >= product.stock_quantity ? '#aaa' : 'blue',
+                  }}
+                >
+                  +
+                </Text>
               </TouchableOpacity>
             </View>
           )}
 
           <TouchableOpacity
-            style={[styles.addBtn, (!allVariationsSelected || outOfStock) && { backgroundColor: 'lightgray' }]}
+            style={[
+              styles.addBtn,
+              (!allVariationsSelected || outOfStock) && { backgroundColor: 'lightgray' },
+            ]}
             onPress={() => updateCart(product, 1, selectedVariations)}
             disabled={!allVariationsSelected || outOfStock}
           >
@@ -251,9 +318,73 @@ export default function CustomerStoresProducts({ route }: any) {
         ListHeaderComponent={
           <View style={{ marginTop: 40, paddingHorizontal: 16 }}>
             <Text style={styles.storeTitle}>{store.final_name}</Text>
+
+            {categories.length > 0 && (
+              <View style={styles.filters}>
+                <Text style={styles.filterLabel}>Categorias:</Text>
+                <View style={styles.filterOptions}>
+                  <TouchableOpacity
+                    style={[styles.filterBtn, !selectedCategory && styles.filterBtnActive]}
+                    onPress={() => setSelectedCategory(null)}
+                  >
+                    <Text
+                      style={!selectedCategory ? styles.filterTextActive : styles.filterText}
+                    >
+                      Todos
+                    </Text>
+                  </TouchableOpacity>
+                  {categories.map(cat => (
+                    <TouchableOpacity
+                      key={cat.id}
+                      style={[
+                        styles.filterBtn,
+                        selectedCategory?.id === cat.id && styles.filterBtnActive,
+                      ]}
+                      onPress={() => setSelectedCategory(cat)}
+                    >
+                      <Text
+                        style={
+                          selectedCategory?.id === cat.id
+                            ? styles.filterTextActive
+                            : styles.filterText
+                        }
+                      >
+                        {cat.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            <View style={styles.filters}>
+              <Text style={styles.filterLabel}>Ordenar por:</Text>
+              <View style={styles.filterOptions}>
+                <TouchableOpacity
+                  style={[styles.filterBtn, sortBy === 'name' && styles.filterBtnActive]}
+                  onPress={() => setSortBy('name')}
+                >
+                  <Text
+                    style={sortBy === 'name' ? styles.filterTextActive : styles.filterText}
+                  >
+                    Nome
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.filterBtn, sortBy === 'price' && styles.filterBtnActive]}
+                  onPress={() => setSortBy('price')}
+                >
+                  <Text
+                    style={sortBy === 'price' ? styles.filterTextActive : styles.filterText}
+                  >
+                    Preço
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
         }
-        data={store.products}
+        data={filteredProducts}
         keyExtractor={p => p.id.toString()}
         renderItem={({ item }) => <ProductCard product={item} />}
         ListFooterComponent={
@@ -280,7 +411,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     margin: 8,
     overflow: 'hidden',
-    elevation: 2
+    elevation: 2,
   },
   imageNav: {
     position: 'absolute',
@@ -289,16 +420,43 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 8
+    paddingHorizontal: 8,
   },
   title: { fontWeight: 'bold', fontSize: 16 },
   description: { fontSize: 12, color: '#666' },
   price: { fontSize: 14, fontWeight: 'bold', marginVertical: 4 },
   outOfStock: { color: 'red', fontWeight: 'bold', marginTop: 6 },
   qtyRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
-  addBtn: { backgroundColor: 'blue', padding: 10, borderRadius: 6, marginTop: 8, alignItems: 'center' },
+  addBtn: {
+    backgroundColor: 'blue',
+    padding: 10,
+    borderRadius: 6,
+    marginTop: 8,
+    alignItems: 'center',
+  },
   addBtnText: { color: 'white', fontWeight: 'bold' },
   storeTitle: { fontWeight: 'bold', fontSize: 20, marginBottom: 12 },
-  footerBtn: { backgroundColor: 'blue', margin: 16, padding: 14, borderRadius: 8, alignItems: 'center' },
-  footerBtnText: { color: 'white', fontWeight: 'bold' }
+  filters: { marginBottom: 12 },
+  filterLabel: { fontWeight: 'bold', marginBottom: 6 },
+  filterOptions: { flexDirection: 'row', flexWrap: 'wrap' },
+  filterBtn: {
+    borderWidth: 1,
+    borderColor: '#007bff',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  filterBtnActive: { backgroundColor: '#007bff' },
+  filterText: { color: '#007bff' },
+  filterTextActive: { color: 'white', fontWeight: 'bold' },
+  footerBtn: {
+    backgroundColor: 'blue',
+    margin: 16,
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  footerBtnText: { color: 'white', fontWeight: 'bold' },
 });

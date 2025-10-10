@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../services/api';
 import * as FileSystem from 'expo-file-system';
 import { Picker } from '@react-native-picker/picker';
+import { useIsFocused } from '@react-navigation/native';
 
 const base64toBlob = (base64: string, mime: string) => {
   const byteCharacters = atob(base64);
@@ -65,62 +66,66 @@ export default function StoreProfile() {
 
   const daysOfWeek = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
 
-  useEffect(() => {
-    const loadCompany = async () => {
-      const token = await AsyncStorage.getItem('@token');
-      if (!token) return;
+  const loadCompany = async () => {
+    const token = await AsyncStorage.getItem('@token');
+    if (!token) return;
 
-      try {
-        const res = await api.get('/companies/me', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+    try {
+      const res = await api.get('/companies/me', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
-        const company = res.data;
+      const company = res.data;
 
-        setName(company.final_name || '');
-        setCnpj(company.cnpj || '');
-        setPhone(company.phone || '');
-        setEmail(company.email || '');
-        setAddress(company.address || '');
-        if (company.category && categories.includes(company.category)) {
-          setCategory(company.category);
-        } else {
-          setCategory('');
-        }
-        setStatus(company.status || 'active');
-        setDeliveryFee(company.delivery_fee != null ? Number(company.delivery_fee).toFixed(2).replace('.', ',') : '');
-        setDeliveryRadius(company.delivery_radius != null ? String(company.delivery_radius) : '');
-
-        let hours: OpeningHour[] = [];
-        if (company.opening_hours) {
-          if (typeof company.opening_hours === "string") {
-            try {
-              hours = JSON.parse(company.opening_hours);
-            } catch (e) {
-              console.error("Erro ao parsear opening_hours:", e);
-              hours = [];
-            }
-          } else {
-            hours = company.opening_hours;
-          }
-        }
-        setOpeningHours(hours);
-
-        if (company.logo) {
-          setLogo({
-            uri: `http://192.168.0.79:8000/storage/${company.logo}`,
-            name: 'logo.jpg',
-            type: 'image/jpeg',
-            isNew: false
-          });
-        }
-      } catch (err) {
-        console.error(err);
+      setName(company.final_name || '');
+      setCnpj(company.cnpj || '');
+      setPhone(company.phone || '');
+      setEmail(company.email || '');
+      setAddress(company.address || '');
+      if (company.category && categories.includes(company.category)) {
+        setCategory(company.category);
+      } else {
+        setCategory('');
       }
-    };
+      setStatus(company.status || 'active');
+      setDeliveryFee(company.delivery_fee != null ? Number(company.delivery_fee).toFixed(2).replace('.', ',') : '');
+      setDeliveryRadius(company.delivery_radius != null ? String(company.delivery_radius) : '');
 
-    loadCompany();
-  }, []);
+      let hours: OpeningHour[] = [];
+      if (company.opening_hours) {
+        if (typeof company.opening_hours === "string") {
+          try {
+            hours = JSON.parse(company.opening_hours);
+          } catch (e) {
+            console.error("Erro ao parsear opening_hours:", e);
+            hours = [];
+          }
+        } else {
+          hours = company.opening_hours;
+        }
+      }
+      setOpeningHours(hours);
+
+      if (company.logo) {
+        setLogo({
+          uri: `http://192.168.0.72:8000/storage/${company.logo}`,
+          name: 'logo.jpg',
+          type: 'image/jpeg',
+          isNew: false
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const isFocused = useIsFocused();
+
+  useEffect(() => {
+    if (isFocused) {
+      loadCompany();
+    }
+  }, [isFocused]);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -266,91 +271,99 @@ export default function StoreProfile() {
 
   return (
     <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
     >
-        <FlatList
-            style={{ padding: 16 }}
-            data={openingHours}
-            keyExtractor={(_, index) => index.toString()}
-            ListHeaderComponent={
-            <>
-                <Text style={styles.title}>Perfil da Loja</Text>
+    <FlatList
+      style={{ padding: 16 }}
+      data={openingHours}
+      keyExtractor={(_, index) => index.toString()}
+      ListHeaderComponent={
+        <>
+          <Text style={styles.title}>Perfil da Loja</Text>
 
-                <TextInput style={styles.input} placeholder="Nome da loja" value={name} onChangeText={setName} />
-                <TextInput style={styles.input} placeholder="CNPJ" value={cnpj} editable={false} />
-                <TextInput style={styles.input} placeholder="Telefone" value={formatPhone(phone)} onChangeText={(text) => setPhone(text.replace(/\D/g, ""))} />
-                <TextInput style={styles.input} placeholder="E-mail" value={email} onChangeText={setEmail} />
-                <TextInput style={styles.input} placeholder="Endereço" value={address} onChangeText={setAddress} />
+          <TextInput style={styles.input} placeholder="Nome da loja" value={name} onChangeText={setName} />
+          <TextInput style={styles.input} placeholder="CNPJ" value={cnpj} editable={false} />
+          <TextInput style={styles.input} placeholder="Telefone" value={formatPhone(phone)} onChangeText={(text) => setPhone(text.replace(/\D/g, ""))} />
+          <TextInput style={styles.input} placeholder="E-mail" value={email} onChangeText={setEmail} />
+          <TextInput style={styles.input} placeholder="Endereço" value={address} onChangeText={setAddress} />
 
-                <Text style={styles.label}>Categoria</Text>
-                <View style={styles.pickerWrapper}>
-                <Picker selectedValue={category} onValueChange={(v) => setCategory(v)}>
-                    <Picker.Item label="Selecione a categoria" value="" />
-                    {categories.map((cat, i) => (
-                    <Picker.Item key={i} label={cat} value={cat} />
-                    ))}
-                </Picker>
-                </View>
+          <Text style={styles.label}>Categoria</Text>
+          <View style={styles.pickerWrapper}>
+            <Picker selectedValue={category} onValueChange={(v) => setCategory(v)}>
+              <Picker.Item label="Selecione a categoria" value="" />
+              {categories.map((cat, i) => (
+                <Picker.Item key={i} label={cat} value={cat} />
+              ))}
+            </Picker>
+          </View>
 
-                <Text style={styles.label}>Status</Text>
-                <View style={styles.pickerWrapper}>
-                <Picker selectedValue={status} onValueChange={(v) => setStatus(v)}>
-                    <Picker.Item label="Ativa" value="active" />
-                    <Picker.Item label="Pausada" value="suspended" />
-                </Picker>
-                </View>
+          <Text style={styles.label}>Status</Text>
+          <View style={styles.pickerWrapper}>
+            <Picker selectedValue={status} onValueChange={(v) => setStatus(v)}>
+              <Picker.Item label="Ativa" value="active" />
+              <Picker.Item label="Pausada" value="suspended" />
+            </Picker>
+          </View>
 
-                <TextInput style={styles.input} placeholder="Taxa de entrega (R$)" value={deliveryFee} onChangeText={setDeliveryFee} keyboardType="numeric" />
-                <TextInput style={styles.input} placeholder="Raio de entrega (km)" value={deliveryRadius} onChangeText={setDeliveryRadius} keyboardType="numeric" />
+          <TextInput style={styles.input} placeholder="Taxa de entrega (R$)" value={deliveryFee} onChangeText={setDeliveryFee} keyboardType="numeric" />
+          <TextInput style={styles.input} placeholder="Raio de entrega (km)" value={deliveryRadius} onChangeText={setDeliveryRadius} keyboardType="numeric" />
 
-                <TouchableOpacity style={styles.button} onPress={pickImage}>
-                <Text style={styles.buttonText}>Selecionar logo</Text>
-                </TouchableOpacity>
-                {logo && (
-                <Image source={{ uri: logo.uri }} style={{ width: 120, height: 120, marginTop: 10, borderRadius: 8 }} />
-                )}
+          <TouchableOpacity style={styles.button} onPress={pickImage}>
+            <Text style={styles.buttonText}>Selecionar logo</Text>
+          </TouchableOpacity>
+          {logo && (
+            <Image source={{ uri: logo.uri }} style={{ width: 120, height: 120, marginTop: 10, borderRadius: 8 }} />
+          )}
+        </>
+      }
+      renderItem={({ item, index }) => (
+        <View style={styles.openingHourRow}>
+          <View style={{ flex: 2 }}>
+            <Picker
+              selectedValue={item.day}
+              onValueChange={(v) => handleChangeOpeningHour(index, 'day', v)}
+            >
+              <Picker.Item label="Selecione o dia" value="" />
+              {daysOfWeek.map((d, i) => <Picker.Item key={i} label={d} value={d} />)}
+            </Picker>
+          </View>
+          <TextInput
+            style={[styles.input, { flex: 1 }]}
+            placeholder="Abre"
+            value={item.open}
+            onChangeText={(v) => handleChangeOpeningHour(index, 'open', v)}
+          />
+          <TextInput
+            style={[styles.input, { flex: 1 }]}
+            placeholder="Fecha"
+            value={item.close}
+            onChangeText={(v) => handleChangeOpeningHour(index, 'close', v)}
+          />
+          <TouchableOpacity onPress={() => handleRemoveOpeningHour(index)}>
+            <Text style={{ color: 'red', marginLeft: 8 }}>Remover</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      ListFooterComponent={
+        <>
+          <TouchableOpacity
+            style={[styles.button, { marginTop: 8 }]}
+            onPress={handleAddOpeningHour}
+          >
+            <Text style={styles.buttonText}>Adicionar horário</Text>
+          </TouchableOpacity>
 
-                <Text style={[styles.label, { marginTop: 16 }]}>Horários de Abertura</Text>
-                <TouchableOpacity
-                  style={[styles.button, { marginTop: 8 }]}
-                  onPress={handleAddOpeningHour}
-                >
-                  <Text style={styles.buttonText}>Adicionar horário</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={[styles.button, { backgroundColor: 'green', marginTop: 16 }]} onPress={handleSave}>
-                <Text style={[styles.buttonText, { color: 'white' }]}>Salvar loja</Text>
-                </TouchableOpacity>
-            </>
-            }
-            renderItem={({ item, index }) => (
-            <View style={styles.openingHourRow}>
-                <View style={{ flex: 2 }}>
-                <Picker selectedValue={item.day} onValueChange={(v) => handleChangeOpeningHour(index, 'day', v)}>
-                    <Picker.Item label="Selecione o dia" value="" />
-                    {daysOfWeek.map((d, i) => <Picker.Item key={i} label={d} value={d} />)}
-                </Picker>
-                </View>
-                <TextInput
-                style={[styles.input, { flex: 1 }]}
-                placeholder="Abre"
-                value={item.open}
-                onChangeText={(v) => handleChangeOpeningHour(index, 'open', v)}
-                />
-                <TextInput
-                style={[styles.input, { flex: 1 }]}
-                placeholder="Fecha"
-                value={item.close}
-                onChangeText={(v) => handleChangeOpeningHour(index, 'close', v)}
-                />
-                <TouchableOpacity onPress={() => handleRemoveOpeningHour(index)}>
-                <Text style={{ color: 'red', marginLeft: 8 }}>Remover</Text>
-                </TouchableOpacity>
-            </View>
-            )}
-        />
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: 'green', marginTop: 16 }]}
+            onPress={handleSave}
+          >
+            <Text style={[styles.buttonText, { color: 'white' }]}>Salvar loja</Text>
+          </TouchableOpacity>
+        </>
+      }
+    />
     </KeyboardAvoidingView>
   );
 }

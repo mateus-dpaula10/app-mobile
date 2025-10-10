@@ -65,6 +65,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (userData: User, authToken: string) => {
+    if (!userData || !authToken) {
+      console.error("Login falhou: dados de usuário ou token ausentes.");
+      throw new Error("Usuário ou token inválido");
+    }
+
     try {
       setUser(userData);
       setToken(authToken);

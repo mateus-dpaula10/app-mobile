@@ -7,6 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import { Picker } from '@react-native-picker/picker';
+import { useIsFocused } from '@react-navigation/native';
 
 const base64toBlob = (base64: string, mime: string) => {
   const byteCharacters = atob(base64);
@@ -111,7 +112,7 @@ export default function StoreProducts() {
       return;
     }
 
-    if (!price || isNaN(Number(price))) {
+    if (!price) {
       alert("Digite um preço válido");
       return;
     }
@@ -200,35 +201,39 @@ export default function StoreProducts() {
     }
   }, [categories, category])
 
+  const loadProducts = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/products');
+      setProducts(res.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadCategories = async () => {
+    const token = await AsyncStorage.getItem('@token');
+    if (!token) return;
+    try {
+      const res = await api.get('/categories', { headers: { Authorization: `Bearer ${token}` } });
+      setCategories(res.data.map((c: any) => c.name));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const isFocused = useIsFocused();
+
   useEffect(() => {
-    const loadProducts = async () => {
-      setLoading(true);
-      try {
-        const res = await api.get('/products');
-        setProducts(res.data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (isFocused) {
+      loadProducts();
+      loadCategories();
+    }
+  }, [isFocused]);
 
-    const loadCategories = async () => {
-      const token = await AsyncStorage.getItem('@token');
-      if (!token) return;
-      try {
-        const res = await api.get('/categories', { headers: { Authorization: `Bearer ${token}` } });
-        setCategories(res.data.map((c: any) => c.name));
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    loadProducts();
-    loadCategories();
-  }, []);
-
-  const getImageUrl = (path: string) => `http://192.168.0.79:8000/storage/${path}`;
+  const getImageUrl = (path: string) => `http://192.168.0.72:8000/storage/${path}`;
   const { width } = useWindowDimensions();
   const numColumns = width < 500 ? 1 : width < 900 ? 2 : 3;
 

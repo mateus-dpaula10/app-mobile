@@ -4,6 +4,7 @@ import LayoutWithSidebar from '../../components/LayoutWithSidebar';
 import { Box, HStack, Image, Text, VStack } from 'native-base';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../services/api';
+import { useIsFocused } from '@react-navigation/native';
 
 type ProductImage = { id: number; product_id: number; image_path: string; };
 type Product = { id: number; name: string; description: string; price: number; stock_quantity: number; company_id: number; images: ProductImage[]; };
@@ -24,7 +25,13 @@ export default function ClientOrders() {
     }
   };
 
-  useEffect(() => { fetchOrders(); }, []);
+  const isFocused = useIsFocused();
+
+  useEffect(() => { 
+    if (isFocused) {
+      fetchOrders();
+    }
+  }, [isFocused]);
 
   const getStatusLabel = (status: string) => {
     switch (status) {
@@ -46,7 +53,7 @@ export default function ClientOrders() {
         <HStack>
           {product.images?.[0] && (
             <Image
-              source={{ uri: `http://192.168.0.79:8000/storage/${product.images[0].image_path}` }}
+              source={{ uri: `http://192.168.0.72:8000/storage/${product.images[0].image_path}` }}
               alt={product.name}
               width={100}
               height="100%"

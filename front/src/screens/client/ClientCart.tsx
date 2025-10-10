@@ -1,20 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform } from 'react-native';
-import { Box, Button, HStack, IconButton, Image, Text, useToast, VStack } from 'native-base';
+import {
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  Alert,
+  StyleSheet
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../services/api';
+import { useIsFocused } from '@react-navigation/native';
 
-type ProductImage = {
-  id: number;
-  product_id: number;
-  image_path: string;
-};
-
+type ProductImage = { id: number; product_id: number; image_path: string };
+type ProductVariation = { id: number; type: string; value: string };
 type Product = {
   id: number;
   name: string;
-  description: string;
+  description?: string;
   price: number;
   stock_quantity: number;
   company_id: number;
@@ -22,13 +28,22 @@ type Product = {
 };
 
 type CartItem = {
+  id: number;
   product: Product;
   quantity: number;
+  price: number;
+  subtotal: number;
+  variations: ProductVariation[];
+  variation_key?: string; // string "Tamanho:M | Sabor:Calabresa"
 };
 
 export default function ClientCart() {
   const [cart, setCart] = useState<CartItem[]>([]);
-  const toast = useToast();
+  const isFocused = useIsFocused();
+
+  useEffect(() => {
+    if (isFocused) fetchCart();
+  }, [isFocused]);
 
   const fetchCart = async () => {
     try {
@@ -37,194 +52,219 @@ export default function ClientCart() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (response.data.cart) {
-        setCart(
-          response.data.cart.items.map((item: any) => ({
-            product: item.product,
-            quantity: item.quantity,
-          }))
-        );
+      if (response.data?.cart?.items) {
+        const items: CartItem[] = response.data.cart.items;
+        console.log('Cart items:', items);
+        setCart(items);
+      } else {
+        setCart([]);
       }
     } catch (err) {
-      console.error(err);
-      toast.show({
-        title: 'Erro',
-        description: 'Não foi possível carregar o carrinho',
-        duration: 3000,
-      });
+      console.error('Erro ao carregar carrinho:', err);
+      Alert.alert('Erro', 'Não foi possível carregar o carrinho');
     }
   };
 
-  useEffect(() => {
-    fetchCart();
-  }, []);
-
-  const updateCart = (product: Product, delta: number) => {
-    setCart((prev) => {
-      const existing = prev.find((c) => c.product.id === product.id);
-      if (existing) {
-        const newQty = existing.quantity + delta;
-        if (newQty <= 0) return prev.filter((c) => c.product.id !== product.id);
-        return prev.map((c) =>
-          c.product.id === product.id ? { ...c, quantity: newQty } : c
-        );
-      } else if (delta > 0) {
-        return [...prev, { product, quantity: delta }];
-      }
-      return prev;
-    });
+  const removeItem = async (itemId: number) => {
+    try {
+      const token = await AsyncStorage.getItem('@token');
+      await api.delete(`/cart/items/${itemId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setCart(prev => prev.filter(c => c.id !== itemId));
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Erro', 'Não foi possível remover o produto');
+    }
   };
 
-  const getTotal = () => {
-    return cart.reduce((sum, c) => sum + c.quantity * c.product.price, 0);
+  const incrementQuantity = async (itemId: number) => {
+    try {
+      const token = await AsyncStorage.getItem('@token');
+      await api.put(`/cart/items/${itemId}/increment`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchCart();
+    } catch (err) {
+      console.error('Erro ao aumentar quantidade:', err);
+    }
   };
+
+  const decrementQuantity = async (itemId: number) => {
+    try {
+      const token = await AsyncStorage.getItem('@token');
+      await api.put(`/cart/items/${itemId}/decrement`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchCart();
+    } catch (err) {
+      console.error('Erro ao diminuir quantidade:', err);
+    }
+  };
+
+  const getTotal = () => cart.reduce((sum, c) => sum + c.subtotal, 0);
 
   const checkout = async () => {
+    if (!cart.length) return Alert.alert('Aviso', 'Seu carrinho está vazio');
     try {
       const token = await AsyncStorage.getItem('@token');
       await api.post(
         '/cart/checkout',
-        { products: cart.map((c) => ({ id: c.product.id, quantity: c.quantity })) },
+        {
+          items: cart.map(c => ({
+            id: c.id,
+            product_id: c.product.id,
+            quantity: c.quantity,
+            variation_ids: c.variations.map(v => v.id),
+          })),
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      toast.show({ title: 'Compra realizada', duration: 3000 });
+      Alert.alert('Sucesso', 'Compra realizada com sucesso');
       setCart([]);
-    } catch (err: unknown) {
+    } catch (err) {
       console.error(err);
-      toast.show({ title: 'Erro', description: 'Erro no checkout', duration: 3000 });
+      Alert.alert('Erro', 'Erro no checkout');
     }
   };
 
-  function CartItemCard({ item }: { item: CartItem }) {
-    const { product, quantity } = item;
-    const outOfStock = product.stock_quantity <= 0;
+  const CartItemCard = ({ item }: { item: CartItem }) => (
+    <View style={styles.card}>
+      {item.product.images?.length > 0 && (
+        <Image
+          source={{
+            uri: `http://192.168.0.72:8000/storage/${item.product.images[0].image_path}`,
+          }}
+          style={styles.image}
+        />
+      )}
 
-    const removeItem = async () => {
-      try {
-        const token = await AsyncStorage.getItem('@token');
-        await api.delete(`/cart/items/${product.id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+      <View style={styles.cardContent}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.productName}>{item.product.name}</Text>
+          <TouchableOpacity onPress={() => removeItem(item.id)}>
+            <Ionicons name="trash-outline" size={22} color="red" />
+          </TouchableOpacity>
+        </View>
 
-        setCart((prev) => prev.filter((c) => c.product.id !== product.id));
-        toast.show({ title: 'Produto removido do carrinho', duration: 3000 });
-      } catch (err) {
-        console.error(err);
-        toast.show({
-          title: 'Erro',
-          description: 'Não foi possível remover do carrinho',
-          duration: 3000,
-        });
-      }
-    };
+        <Text numberOfLines={2} style={styles.description}>
+          {item.product.description}
+        </Text>
 
-    return (
-      <Box
-        borderWidth={1}
-        borderColor="gray.200"
-        borderRadius="lg"
-        overflow="hidden"
-        bg="white"
-        shadow={1}
-        m={2}
-      >
-        <HStack>
-          {product.images && product.images.length > 0 && (
-            <Image
-              source={{
-                uri: `http://192.168.0.79:8000/storage/${product.images[0].image_path}`,
-              }}
-              alt={product.name}
-              width={100}
-              height="100%"
-              resizeMode="cover"
+        {/* Exibe combinação de variações */}
+        {item.variation_key && (
+          <Text style={styles.variationKey}>{item.variation_key}</Text>
+        )}
+
+        <Text style={styles.price}>
+          R$ {Number(item.price).toFixed(2).replace('.', ',')}
+        </Text>
+
+        <View style={styles.qtyRow}>
+          <TouchableOpacity
+            onPress={() => decrementQuantity(item.id)}
+            disabled={item.quantity <= 1}
+          >
+            <Ionicons
+              name="remove-circle-outline"
+              size={24}
+              color={item.quantity <= 1 ? '#ccc' : 'gray'}
             />
-          )}
-          <VStack flex={1} p={3} space={2}>
-            <HStack justifyContent="space-between" alignItems="center">
-              <Text bold fontSize="md">
-                {product.name}
-              </Text>
-              <IconButton
-                icon={<Ionicons name="trash-outline" size={24} color="red" />}
-                onPress={removeItem}
-              />
-            </HStack>
+          </TouchableOpacity>
 
-            <Text fontSize="sm" color="gray.600" numberOfLines={2}>
-              {product.description}
-            </Text>
-            <Text fontSize="sm" color="gray.800">
-              R$ {Number(product.price).toFixed(2).replace('.', ',')}
-            </Text>
+          <Text style={styles.qty}>{item.quantity}</Text>
 
-            {!outOfStock ? (
-              <HStack alignItems="center" space={2}>
-                <IconButton
-                  icon={<Ionicons name="remove-circle-outline" size={24} color="gray" />}
-                  onPress={() => updateCart(product, -1)}
-                  isDisabled={quantity <= 0}
-                />
-                <Text fontSize="md" width={8} textAlign="center">
-                  {quantity}
-                </Text>
-                <IconButton
-                  icon={<Ionicons name="add-circle-outline" size={24} color="blue" />}
-                  onPress={() => updateCart(product, 1)}
-                  isDisabled={quantity >= product.stock_quantity}
-                />
-              </HStack>
-            ) : (
-              <Text fontSize="sm" color="red.500" bold mt={2}>
-                Esgotado
-              </Text>
-            )}
-          </VStack>
-        </HStack>
-      </Box>
-    );
-  }
+          <TouchableOpacity
+            onPress={() => incrementQuantity(item.id)}
+            disabled={item.quantity >= item.product.stock_quantity}
+          >
+            <Ionicons
+              name="add-circle-outline"
+              size={24}
+              color={
+                item.quantity >= item.product.stock_quantity ? '#ccc' : 'blue'
+              }
+            />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
 
   return (
     <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+      style={{ flex: 1, padding: 16 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
     >
-        <VStack mt={10} flex={1}>
-            <Text bold fontSize="xl" mb={4}>
-            Meu Carrinho
-            </Text>
+      <Text style={styles.title}>Meu Carrinho</Text>
 
-            {cart.length === 0 ? (
-            <Text textAlign="center" mt={10}>
-                Seu carrinho está vazio
-            </Text>
-            ) : (
-            <>
-                <FlatList
-                    data={cart}
-                    keyExtractor={(item) => item.product.id.toString()}
-                    keyboardShouldPersistTaps="handled"
-                    renderItem={({ item }) => <CartItemCard item={item} />}
-                    ListFooterComponent={
-                        <Box p={4} borderTopWidth={1} borderColor="gray.200">
-                            <HStack justifyContent="space-between" mb={2}>
-                                <Text bold>Total:</Text>
-                                <Text bold>
-                                R$ {getTotal().toFixed(2).replace('.', ',')}
-                                </Text>
-                            </HStack>
-                            <Button onPress={checkout} colorScheme="blue">
-                                Finalizar Compra
-                            </Button>
-                        </Box>
-                    }
-                />
-            </>
-            )}
-        </VStack>
-    </KeyboardAvoidingView>    
+      {cart.length === 0 ? (
+        <Text style={styles.emptyCart}>Seu carrinho está vazio</Text>
+      ) : (
+        <FlatList
+          data={cart}
+          keyExtractor={item => item.id.toString()}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }) => <CartItemCard item={item} />}
+          ListFooterComponent={
+            <View style={styles.footer}>
+              <View style={styles.footerRow}>
+                <Text style={styles.totalLabel}>Total:</Text>
+                <Text style={styles.totalValue}>
+                  R$ {getTotal().toFixed(2).replace('.', ',')}
+                </Text>
+              </View>
+              <TouchableOpacity style={styles.checkoutBtn} onPress={checkout}>
+                <Text style={styles.checkoutText}>Finalizar Compra</Text>
+              </TouchableOpacity>
+            </View>
+          }
+        />
+      )}
+    </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    marginBottom: 12,
+    backgroundColor: '#fff',
+    overflow: 'hidden',
+  },
+  image: { width: 100, height: '100%', resizeMode: 'cover' },
+  cardContent: { flex: 1, padding: 10 },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  productName: { fontWeight: 'bold', fontSize: 16 },
+  description: { fontSize: 13, color: '#666', marginVertical: 4 },
+  variationKey: { fontSize: 13, color: '#007bff', marginBottom: 4 },
+  price: { fontSize: 14, color: '#333' },
+  qtyRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
+  qty: { marginHorizontal: 10, fontSize: 16, fontWeight: 'bold' },
+  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 12 },
+  emptyCart: { textAlign: 'center', marginTop: 40, fontSize: 16, color: '#555' },
+  footer: {
+    borderTopWidth: 1,
+    borderColor: '#ddd',
+    paddingVertical: 16,
+    marginTop: 12,
+  },
+  footerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  totalLabel: { fontWeight: 'bold', fontSize: 16 },
+  totalValue: { fontWeight: 'bold', fontSize: 16 },
+  checkoutBtn: {
+    backgroundColor: '#007bff',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  checkoutText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+});
