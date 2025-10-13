@@ -233,7 +233,7 @@ export default function StoreProducts() {
     }
   }, [isFocused]);
 
-  const getImageUrl = (path: string) => `http://192.168.0.79:8000/storage/${path}`;
+  const getImageUrl = (path: string) => `http://192.168.0.72:8000/storage/${path}`;
   const { width } = useWindowDimensions();
   const numColumns = width < 500 ? 1 : width < 900 ? 2 : 3;
 

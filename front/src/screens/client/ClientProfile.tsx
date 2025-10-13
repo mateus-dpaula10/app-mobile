@@ -59,7 +59,7 @@ export default function ClientProfile() {
     const [passwordValid, setPasswordValid] = useState(true);
     const [photo, setPhoto] = useState<ImageFile | null>(
         user?.photo
-        ? { uri: `http://192.168.0.79:8000/storage/${user?.photo}`, name: 'profile.jpg', type: 'image/jpeg', isNew: false }
+        ? { uri: `http://192.168.0.72:8000/storage/${user?.photo}`, name: 'profile.jpg', type: 'image/jpeg', isNew: false }
         : null
     );
 
