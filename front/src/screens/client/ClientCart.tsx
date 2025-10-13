@@ -54,7 +54,6 @@ export default function ClientCart() {
 
       if (response.data?.cart?.items) {
         const items: CartItem[] = response.data.cart.items;
-        console.log('Cart items:', items);
         setCart(items);
       } else {
         setCart([]);
@@ -133,7 +132,7 @@ export default function ClientCart() {
       {item.product.images?.length > 0 && (
         <Image
           source={{
-            uri: `http://192.168.0.72:8000/storage/${item.product.images[0].image_path}`,
+            uri: `http://192.168.0.79:8000/storage/${item.product.images[0].image_path}`,
           }}
           style={styles.image}
         />

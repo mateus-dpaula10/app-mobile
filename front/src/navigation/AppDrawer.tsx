@@ -8,6 +8,7 @@ import CustomerStores from "../screens/client/CustomerStores";
 import CustomerStoresProducts from "../screens/client/CustomerStoresProducts";
 import ClientCart from "../screens/client/ClientCart";
 import ClientOrders from "../screens/client/ClientOrders";
+import ClientProfile from "../screens/client/ClientProfile";
 
 const Drawer = createDrawerNavigator();
 
@@ -27,7 +28,8 @@ export default function AppDrawer() {
       { name: "CustomerStores", component: CustomerStores },
       { name: "CustomerStoresProducts", component: CustomerStoresProducts },
       { name: "ClientCart", component: ClientCart },
-      { name: "ClientOrders", component: ClientOrders }
+      { name: "ClientOrders", component: ClientOrders },
+      { name: "ClientProfile", component: ClientProfile },
     ]
   };
 

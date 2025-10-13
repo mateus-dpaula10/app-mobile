@@ -9,6 +9,7 @@ use App\Models\ProductImage;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\Category;
+use App\Models\CartItem;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
@@ -366,7 +367,7 @@ class ProductController extends Controller
         ]);
     }
 
-    public function removeItem(Product $product)
+    public function removeItem(CartItem $item)
     {
         $authUser = auth()->user();
 
@@ -383,13 +384,11 @@ class ProductController extends Controller
             return response()->json(['message' => 'Carrinho não encontrado'], 404);
         }
 
-        $cartItem = $cart->items()->where('product_id', $product->id)->first();
-
-        if (!$cartItem) {
-            return response()->json(['message' => 'Produto não encontrado no carrinho'], 404);
+        if ($item->cart_id !== $cart->id) {
+            return response()->json(['message' => 'Item não pertence a este carrinho'], 403);
         }
 
-        $cartItem->delete();
+        $item->delete();
 
         if ($cart->items()->count() === 0) {
             $cart->delete();
@@ -397,6 +396,24 @@ class ProductController extends Controller
         }
 
         return response()->json(['message' => 'Produto removido do carrinho']);
+    }
+
+    public function incrementItem(CartItem $item)
+    {
+        $item->quantity += 1;
+        $item->save();
+        return response()->json(['message' => 'Quantidade aumentada']);
+    }
+
+    public function decrementItem(CartItem $item)
+    {
+        if ($item->quantity > 1) {
+            $item->quantity -= 1;
+            $item->save();
+        } else {
+            $item->delete();
+        }
+        return response()->json(['message' => 'Quantidade atualizada']);
     }
 
     public function checkout(Request $request)

@@ -1,9 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Button, HStack, IconButton, Image, Input, Text, useToast, VStack } from 'native-base';
-import LayoutWithSidebar from '../../components/LayoutWithSidebar';
+import {
+    View,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    Image,
+    ScrollView,
+    KeyboardAvoidingView,
+    Platform,
+    Alert,
+    StyleSheet
+} from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
-import { KeyboardAvoidingView, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -29,20 +38,19 @@ type Address = {
     complement?: string;
     note?: string;
 };
- 
+
 export default function ClientProfile() {
     const { user, refreshUser } = useAuth();
-    const toast = useToast();
 
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [passwordConfirmation, setPasswordConfirmation] = useState('');
     const [passwordValid, setPasswordValid] = useState(true);
-    const [photo, setPhoto] = useState<ImageFile | null>(null);    
+    const [photo, setPhoto] = useState<ImageFile | null>(null);
 
     const [addresses, setAddresses] = useState<Address[]>([]);
-    const [newAddress, setNewAddress] = useState<Address>({ 
+    const [newAddress, setNewAddress] = useState<Address>({
         label: '',
         cep: '',
         street: '',
@@ -61,7 +69,7 @@ export default function ClientProfile() {
             setAddresses(user.addresses || []);
             if (user.photo) {
                 setPhoto({
-                    uri: `http://192.168.0.72:8000/storage/${user.photo}`,
+                    uri: `http://192.168.0.79:8000/storage/${user.photo}`,
                     name: 'profile.jpg',
                     type: 'image/jpeg',
                     isNew: false
@@ -124,10 +132,23 @@ export default function ClientProfile() {
     };
 
     const addAddress = () => {
-        if (!newAddress.label || !newAddress.cep || !newAddress.street) return;
+        if (!newAddress.label || !newAddress.cep || !newAddress.street) {
+            Alert.alert('Erro', 'Preencha ao menos apelido, CEP e rua.');
+            return;
+        }
         setAddresses(prev => [...prev, { ...newAddress }]);
-        setNewAddress({ label: '', cep: '', street: '', neighborhood: '', city: '', state: '', number: '', complement: '', note: '' });
-        toast.show({ title: 'Endereço adicionado', duration: 3000 });
+        setNewAddress({
+            label: '',
+            cep: '',
+            street: '',
+            neighborhood: '',
+            city: '',
+            state: '',
+            number: '',
+            complement: '',
+            note: ''
+        });
+        Alert.alert('Sucesso', 'Endereço adicionado');
     };
 
     const removeAddress = (index: number) => {
@@ -136,20 +157,15 @@ export default function ClientProfile() {
 
     const handleSave = async () => {
         if (password && !passwordValid) {
-            toast.show({
-                title: 'Senha inválida',
-                description: 'A senha deve conter ao menos 8 caracteres, com letra maiúscula, minúscula, número e símbolo.',
-                duration: 3000,
-            });
+            Alert.alert(
+                'Senha inválida',
+                'A senha deve conter ao menos 8 caracteres, com letra maiúscula, minúscula, número e símbolo.'
+            );
             return;
         }
 
         if (password && password !== passwordConfirmation) {
-            toast.show({
-                title: 'Erro',
-                description: 'As senhas não coincidem.',
-                duration: 3000,
-            });
+            Alert.alert('Erro', 'As senhas não coincidem.');
             return;
         }
 
@@ -184,88 +200,182 @@ export default function ClientProfile() {
             });
 
             await refreshUser();
-            toast.show({
-                title: 'Perfil atualizado com sucesso',
-                duration: 3000,
-                description: res.data.name,
-            });
+            Alert.alert('Sucesso', 'Perfil atualizado com sucesso.');
         } catch (err) {
             console.error(err);
-            toast.show({
-                title: 'Erro ao salvar perfil',
-                duration: 3000
-            });
+            Alert.alert('Erro', 'Falha ao salvar perfil.');
         }
     };
 
     return (
         <KeyboardAvoidingView
-            style={{ flex: 1, padding: 16 }}
+            style={{ flex: 1 }}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
         >
-            <Text bold fontSize="xl">Perfil do Cliente</Text>
-
-            <Input placeholder="Nome" value={name} onChangeText={setName} />
-            <Input placeholder="E-mail" value={email} onChangeText={setEmail} />
-
-            <Input
-                placeholder="Nova senha"
-                value={password}
-                secureTextEntry
-                borderColor={
-                    (password || '').length > 0 && !passwordValid ? 'red.500' : 'gray.300'
-                }
-                onChangeText={(v) => {
-                    setPassword(v);
-                    setPasswordValid(isStrongPassword(v));
-                }}
-            />
-            {(password || '').length > 0 && !passwordValid && (
-                <Text color="red.500" fontSize="xs">
-                    A senha deve conter ao menos 8 caracteres, com letra maiúscula, minúscula, número e símbolo.
+            <ScrollView
+                contentContainerStyle={{ padding: 16, paddingBottom: 50 }}
+                keyboardShouldPersistTaps="handled"
+            >
+                <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 12 }}>
+                    Perfil do Cliente
                 </Text>
-            )}
-            <Input
-                placeholder="Confirme a nova senha"
-                value={passwordConfirmation}
-                onChangeText={setPasswordConfirmation}
-                secureTextEntry
-            />
 
-            <Button mt={2} onPress={pickImage}>
-                Selecionar foto de perfil
-            </Button>
-            {photo && <Image source={{ uri: photo.uri }} alt="Foto de perfil" size="md" mt={2} />}
-            
-            <Text bold mt={5}>Endereços de entrega</Text>
-            {addresses.map((addr, index) => (
-                <Box key={index} p={2} borderWidth={1} borderColor="gray.300" borderRadius="md" mb={2}>
-                    <HStack justifyContent="space-between" alignItems="center">
-                        <VStack>
-                            <Text bold>{addr.label}</Text>
+                <TextInput
+                    placeholder="Nome"
+                    value={name}
+                    onChangeText={setName}
+                    style={styles.input}
+                />
+
+                <TextInput
+                    placeholder="E-mail"
+                    value={email}
+                    onChangeText={setEmail}
+                    style={styles.input}
+                />
+
+                <TextInput
+                    placeholder="Nova senha"
+                    value={password}
+                    secureTextEntry
+                    onChangeText={(v) => {
+                        setPassword(v);
+                        setPasswordValid(isStrongPassword(v));
+                    }}
+                    style={[
+                        styles.input,
+                        (password || '').length > 0 && !passwordValid
+                            ? { borderColor: 'red' }
+                            : {}
+                    ]}
+                />
+
+                {(password || '').length > 0 && !passwordValid && (
+                    <Text style={{ color: 'red', fontSize: 12, marginBottom: 6 }}>
+                        A senha deve conter ao menos 8 caracteres, com letra maiúscula, minúscula, número e símbolo.
+                    </Text>
+                )}
+
+                <TextInput
+                    placeholder="Confirme a nova senha"
+                    value={passwordConfirmation}
+                    secureTextEntry
+                    onChangeText={setPasswordConfirmation}
+                    style={styles.input}
+                />
+
+                <TouchableOpacity style={styles.button} onPress={pickImage}>
+                    <Text style={styles.buttonText}>Selecionar foto de perfil</Text>
+                </TouchableOpacity>
+
+                {photo && (
+                    <Image
+                        source={{ uri: photo.uri }}
+                        style={{ width: 100, height: 100, borderRadius: 50, marginTop: 10, alignSelf: 'center' }}
+                    />
+                )}
+
+                <Text style={styles.sectionTitle}>Endereços de entrega</Text>
+
+                {addresses.map((addr, index) => (
+                    <View key={index} style={styles.addressCard}>
+                        <View style={{ flex: 1 }}>
+                            <Text style={{ fontWeight: 'bold' }}>{addr.label}</Text>
                             <Text>{addr.street}, {addr.number} {addr.complement || ''} - {addr.neighborhood}, {addr.city} / {addr.state}</Text>
-                        </VStack>
-                        <IconButton icon={<Ionicons name="trash-outline" size={20} color="red" />} onPress={() => removeAddress(index)} />
-                    </HStack>
-                </Box>
-            ))}
+                        </View>
+                        <TouchableOpacity onPress={() => removeAddress(index)}>
+                            <Ionicons name="trash-outline" size={20} color="red" />
+                        </TouchableOpacity>
+                    </View>
+                ))}
 
-            <Input placeholder="Apelido do endereço" value={newAddress.label} onChangeText={v => setNewAddress(prev => ({ ...prev, label: v }))} />
-            <Input placeholder="CEP" value={newAddress.cep} onChangeText={v => setNewAddress(prev => ({ ...prev, cep: v }))} onBlur={() => fetchAddressByCep(newAddress.cep)} />
-            <Input placeholder="Rua" value={newAddress.street} isDisabled />
-            <Input placeholder="Bairro" value={newAddress.neighborhood} isDisabled />
-            <Input placeholder="Cidade" value={newAddress.city} isDisabled />
-            <Input placeholder="Estado" value={newAddress.state} isDisabled />
-            <Input placeholder="Número" value={newAddress.number} onChangeText={v => setNewAddress(prev => ({ ...prev, number: v }))} />
-            <Input placeholder="Complemento" value={newAddress.complement} onChangeText={v => setNewAddress(prev => ({ ...prev, complement: v }))} />
-            <Input placeholder="Observações" value={newAddress.note} onChangeText={v => setNewAddress(prev => ({ ...prev, note: v }))} />
+                <TextInput
+                    placeholder="Apelido do endereço"
+                    value={newAddress.label}
+                    onChangeText={v => setNewAddress(prev => ({ ...prev, label: v }))}
+                    style={styles.input}
+                />
+                <TextInput
+                    placeholder="CEP"
+                    value={newAddress.cep}
+                    onChangeText={v => setNewAddress(prev => ({ ...prev, cep: v }))}
+                    onBlur={() => fetchAddressByCep(newAddress.cep)}
+                    style={styles.input}
+                />
+                <TextInput placeholder="Rua" value={newAddress.street} editable={false} style={styles.input} />
+                <TextInput placeholder="Bairro" value={newAddress.neighborhood} editable={false} style={styles.input} />
+                <TextInput placeholder="Cidade" value={newAddress.city} editable={false} style={styles.input} />
+                <TextInput placeholder="Estado" value={newAddress.state} editable={false} style={styles.input} />
+                <TextInput
+                    placeholder="Número"
+                    value={newAddress.number}
+                    onChangeText={v => setNewAddress(prev => ({ ...prev, number: v }))}
+                    style={styles.input}
+                />
+                <TextInput
+                    placeholder="Complemento"
+                    value={newAddress.complement}
+                    onChangeText={v => setNewAddress(prev => ({ ...prev, complement: v }))}
+                    style={styles.input}
+                />
+                <TextInput
+                    placeholder="Observações"
+                    value={newAddress.note}
+                    onChangeText={v => setNewAddress(prev => ({ ...prev, note: v }))}
+                    style={styles.input}
+                />
 
-            <Button mt={2} onPress={addAddress}>Adicionar endereço</Button>
+                <TouchableOpacity style={styles.buttonSecondary} onPress={addAddress}>
+                    <Text style={styles.buttonText}>Adicionar endereço</Text>
+                </TouchableOpacity>
 
-            <Button mt={5} onPress={handleSave} isDisabled={!user}>
-                Salvar perfil
-            </Button>
+                <TouchableOpacity style={[styles.button, { marginTop: 20 }]} onPress={handleSave}>
+                    <Text style={styles.buttonText}>Salvar perfil</Text>
+                </TouchableOpacity>
+            </ScrollView>
         </KeyboardAvoidingView>
     );
 }
+
+const styles = StyleSheet.create({
+    input: {
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 8,
+        padding: 10,
+        marginBottom: 10,
+    },
+    button: {
+        backgroundColor: '#007AFF',
+        padding: 12,
+        borderRadius: 8,
+        alignItems: 'center',
+        marginTop: 5,
+    },
+    buttonSecondary: {
+        backgroundColor: '#34C759',
+        padding: 12,
+        borderRadius: 8,
+        alignItems: 'center',
+        marginTop: 5,
+    },
+    buttonText: {
+        color: '#fff',
+        fontWeight: 'bold',
+    },
+    sectionTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginTop: 20,
+        marginBottom: 8,
+    },
+    addressCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 8,
+        padding: 10,
+        marginBottom: 10,
+    }
+});
