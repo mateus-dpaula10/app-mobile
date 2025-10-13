@@ -8,6 +8,7 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
+  Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -128,7 +129,7 @@ export default function CustomerStoresProducts({ route }: any) {
 
   const addToCart = async () => {
     if (!cart.length) {
-      alert('Selecione produtos');
+      Alert.alert('Selecione produtos');
       return;
     }
 
@@ -137,7 +138,7 @@ export default function CustomerStoresProducts({ route }: any) {
 
       const companyIds = cart.map(c => c.product.company_id);
       if ([...new Set(companyIds)].length > 1) {
-        return alert('Só é possível adicionar produtos da mesma loja ao carrinho');
+        return Alert.alert('Só é possível adicionar produtos da mesma loja ao carrinho');
       }
 
       await api.post(
@@ -152,13 +153,13 @@ export default function CustomerStoresProducts({ route }: any) {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      alert('Produtos adicionados ao carrinho');
+      Alert.alert('Produtos adicionados ao carrinho');
       setCart([]);
     } catch (err: unknown) {
       console.error(err);
       let message = 'Não foi possível adicionar ao carrinho';
       if (err instanceof AxiosError) message = err.response?.data?.message || message;
-      alert(message);
+      Alert.alert(message);
     }
   };
 

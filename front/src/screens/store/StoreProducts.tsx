@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, FlatList, ScrollView, StyleSheet, useWindowDimensions, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, FlatList, ScrollView, StyleSheet, useWindowDimensions, Platform, KeyboardAvoidingView, Alert } from 'react-native';
 import LayoutWithSidebar from '../../components/LayoutWithSidebar';
 import api from '../../services/api';
 import { Product } from '../../types/Product';
@@ -103,22 +103,22 @@ export default function StoreProducts() {
     if (!token) return;
 
     if (!name.trim()) {
-      alert("O nome do produto é obrigatório");
+      Alert.alert("O nome do produto é obrigatório");
       return;
     }
 
     if (!category.trim()) {
-      alert("Selecione ou digite uma categoria");
+      Alert.alert("Selecione ou digite uma categoria");
       return;
     }
 
     if (!price) {
-      alert("Digite um preço válido");
+      Alert.alert("Digite um preço válido");
       return;
     }
 
     if (!stock || isNaN(Number(stock))) {
-      alert("Digite a quantidade em estoque");
+      Alert.alert("Digite a quantidade em estoque");
       return;
     }
 
@@ -151,18 +151,18 @@ export default function StoreProducts() {
           headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` },
         });
         setProducts((prev) => prev.map(p => (p.id === editingId ? response.data : p)));
-        alert("Produto atualizado com sucesso!");
+        Alert.alert("Produto atualizado com sucesso!");
       } else {
         const response = await api.post('/products', formData, {
           headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` },
         });
         setProducts((prev) => [...prev, response.data]);
-          alert("Produto cadastrado com sucesso!");
+          Alert.alert("Produto cadastrado com sucesso!");
       }
       resetForm();
     } catch (err: any) {
       console.error(err);
-      alert('Erro ao cadastrar/atualizar produto. Tente novamente.');
+      Alert.alert('Erro ao cadastrar/atualizar produto. Tente novamente.');
     } finally {
       setSaving(false);
     }
@@ -188,10 +188,10 @@ export default function StoreProducts() {
     try {
       await api.delete(`/products/${id}`, { headers: { Authorization: `Bearer ${token}` } });
       setProducts((prev) => prev.filter(p => p.id !== id));
-      alert("Produto excluído com sucesso!");
+      Alert.alert("Produto excluído com sucesso!");
     } catch (err) {
       console.error(err);
-      alert('Erro ao excluir produto. Tente novamente.');
+      Alert.alert('Erro ao excluir produto. Tente novamente.');
     }
   };
 

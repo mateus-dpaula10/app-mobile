@@ -426,7 +426,7 @@ class ProductController extends Controller
             return response()->json(['message' => 'Carrinho vazio'], 422);
         }
 
-        foreach ($request->products as $product) {
+        foreach ($request->items as $product) {
             $item = $cart->items->where('product_id', $product['id'])->first();
             if ($item) {
                 $item->quantity = $product['quantity'];

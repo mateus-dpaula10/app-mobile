@@ -4,11 +4,11 @@ import {
   Text,
   Image,
   FlatList,
-  Alert,
+  TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
+  Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../services/api';
@@ -37,29 +37,23 @@ type OrderItem = {
   price: string | number;
 };
 
-type Store = {
-  id: number;
-  final_name: string;
-};
-
-type Order = {
+type StoreOrder = {
   id: number;
   code: string;
-  created_at: string;
+  created_at: Date;
   status: string;
   total: number;
-  store: Store;
+  user: { name: string };
   items: OrderItem[];
 };
 
-export default function ClientOrders() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const isFocused = useIsFocused();
+export default function StoreOrders() {
+  const [orders, setOrders] = useState<StoreOrder[]>([]);
 
   const fetchOrders = async () => {
     try {
       const token = await AsyncStorage.getItem('@token');
-      const response = await api.get('/orders', {
+      const response = await api.get('/orders-store', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setOrders(response.data.orders);
@@ -69,9 +63,29 @@ export default function ClientOrders() {
     }
   };
 
+  const isFocused = useIsFocused();
+
   useEffect(() => {
-    if (isFocused) fetchOrders();
+    if (isFocused) {
+        fetchOrders();
+    }
   }, [isFocused]);
+
+  const updateStatus = async (orderId: number, status: string) => {
+    try {
+      const token = await AsyncStorage.getItem('@token');
+      await api.patch(
+        `/orders-store/${orderId}/status`,
+        { status },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      Alert.alert('Sucesso', 'Pedido marcado como pago / pronto para retirada');
+      fetchOrders();
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Erro', 'Não foi possível atualizar o status do pedido');
+    }
+  };
 
   const getStatusLabel = (status: string) => {
     switch (status) {
@@ -84,50 +98,43 @@ export default function ClientOrders() {
       case 'canceled':
         return 'cancelado';
       case 'ready_for_pickup':
+      case 'retirada':
         return 'pronto para retirada';
       default:
         return status;
     }
   };
 
-  const renderOrderItem = ({ item }: { item: OrderItem }) => {
-    const { product, quantity, price } = item;
-    const outOfStock = product.stock_quantity <= 0;
-
-    return (
-      <View style={styles.itemContainer}>
-        {product.images?.[0] && (
-          <Image
-            source={{
-              uri: `http://192.168.0.79:8000/storage/${product.images[0].image_path}`,
-            }}
-            style={styles.itemImage}
-            resizeMode="cover"
-          />
-        )}
-        <View style={styles.itemContent}>
-          <Text style={styles.itemTitle}>{product.name}</Text>
-          <Text style={styles.itemDescription} numberOfLines={2}>
-            {product.description}
-          </Text>
-          <Text style={styles.itemPrice}>
-            Preço unitário: R$ {Number(price).toFixed(2).replace('.', ',')}
-          </Text>
-          <Text style={styles.itemQuantity}>Quantidade: {quantity}</Text>
-          {outOfStock && (
-            <Text style={styles.itemOutOfStock}>Esgotado</Text>
-          )}
-        </View>
+  const renderOrderItem = ({ item }: { item: OrderItem }) => (
+    <View style={styles.itemContainer}>
+      {item.product.images?.[0] && (
+        <Image
+          source={{
+            uri: `http://192.168.0.79:8000/storage/${item.product.images[0].image_path}`,
+          }}
+          style={styles.itemImage}
+          resizeMode="cover"
+        />
+      )}
+      <View style={styles.itemContent}>
+        <Text style={styles.itemTitle}>{item.product.name}</Text>
+        <Text style={styles.itemDescription} numberOfLines={2}>
+          {item.product.description}
+        </Text>
+        <Text style={styles.itemText}>
+          Preço unitário: R$ {Number(item.price).toFixed(2).replace('.', ',')}
+        </Text>
+        <Text style={styles.itemText}>Quantidade: {item.quantity}</Text>
       </View>
-    );
-  };
+    </View>
+  );
 
-  const renderOrder = ({ item }: { item: Order }) => (
+  const renderOrder = ({ item }: { item: StoreOrder }) => (
     <View style={styles.orderContainer}>
       <Text style={styles.orderHeader}>
-        Pedido: {item.code} | Status: {getStatusLabel(item.status)}{'\n'}
-        Loja: {item.store.final_name}{'\n'}
-        Data do pedido: {new Date(item.created_at).toLocaleString()}
+        Pedido: {item.code} | Status: {getStatusLabel(item.status)}
+        {'\n'}Cliente: {item.user.name}
+        {'\n'}Data do pedido: {new Date(item.created_at).toLocaleString()}
       </Text>
 
       <FlatList
@@ -139,6 +146,17 @@ export default function ClientOrders() {
       <Text style={styles.orderTotal}>
         Total: R$ {Number(item.total).toFixed(2).replace('.', ',')}
       </Text>
+
+      {item.status === 'pending' && (
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => updateStatus(item.id, 'ready_for_pickup')}
+        >
+          <Text style={styles.buttonText}>
+            Marcar como pago / pronto para retirada
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -148,30 +166,29 @@ export default function ClientOrders() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
     >
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Meus Pedidos</Text>
+      <View style={styles.container}>
+        <Text style={styles.title}>Pedidos da Loja</Text>
 
         {orders.length === 0 ? (
-          <Text style={styles.emptyText}>Nenhum pedido encontrado</Text>
+          <Text style={styles.emptyText}>Nenhum pedido pendente</Text>
         ) : (
           <FlatList
             data={orders}
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderOrder}
             contentContainerStyle={{ paddingBottom: 40 }}
-            keyboardShouldPersistTaps="handled"
           />
         )}
-      </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
-    paddingHorizontal: 16,
+    flex: 1,
     paddingTop: 40,
+    paddingHorizontal: 16,
   },
   title: {
     fontSize: 22,
@@ -196,6 +213,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
+    color: '#333',
   },
   orderTotal: {
     fontSize: 15,
@@ -214,7 +232,7 @@ const styles = StyleSheet.create({
   },
   itemImage: {
     width: 100,
-    height: '100%',
+    height: 100,
   },
   itemContent: {
     flex: 1,
@@ -230,18 +248,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
   },
-  itemPrice: {
+  itemText: {
     fontSize: 13,
     color: '#333',
-    marginTop: 4,
+    marginTop: 2,
   },
-  itemQuantity: {
-    fontSize: 13,
-    color: '#444',
+  button: {
+    marginTop: 10,
+    backgroundColor: '#22c55e',
+    paddingVertical: 10,
+    borderRadius: 8,
   },
-  itemOutOfStock: {
-    fontSize: 13,
-    color: '#e11d48',
+  buttonText: {
+    color: '#fff',
     fontWeight: '700',
+    textAlign: 'center',
   },
 });

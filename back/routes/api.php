@@ -10,6 +10,8 @@ Route::post('/login', [AuthController::class, 'login'])->name('auth.login');
 Route::post('/register', [AuthController::class, 'register'])->name('auth.register');
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/clients/me', [AuthController::class, 'index'])->name('clients.index');
+    Route::delete('/clients/addresses/{id}', [AuthController::class, 'destroy'])->name('clients.destroy');
     Route::put('/clients/updateProfile', [AuthController::class, 'update'])->name('clients.update');
 
     Route::get('/companies', [CompanyController::class, 'index'])->name('company.index');

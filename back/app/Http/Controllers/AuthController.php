@@ -10,6 +10,12 @@ use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
+    public function index()
+    {
+        $user = auth()->user()->load('addresses');
+        return response()->json($user);
+    }
+
     public function login(Request $request) 
     {
         $credentials = $request->only('email', 'password');
@@ -60,6 +66,20 @@ class AuthController extends Controller
         ], 201);
     }
 
+    public function destroy($id)
+    {
+        $authUser = auth()->user();
+        $address = $authUser->addresses()->find($id);
+
+        if (!$address) {
+            return response()->json(['message' => 'Endereço não encontrado'], 404);
+        }
+
+        $address->delete();
+
+        return response()->json(['message' => 'Endereço removido com sucesso']);
+    }
+
     public function update(Request $request)
     {
         $authUser = auth()->user();
@@ -68,14 +88,14 @@ class AuthController extends Controller
             'name'                     => 'required|string|max:255',
             'email'                    => 'required|email|unique:users,email,' . $authUser->id,
             'password'                 => 'nullable|min:6|confirmed',
-            'photo'                    => 'nullable|image|max:2048',
+            // 'photo'                    => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'addresses'                => 'nullable|array',
-            'addresses.*.label'        => 'required|string|max:255',
-            'addresses.*.cep'          => 'required|string|size:8',
-            'addresses.*.street'       => 'required|string|max:255',
-            'addresses.*.neighborhood' => 'required|string|max:255',
-            'addresses.*.city'         => 'required|string|max:255',
-            'addresses.*.state'        => 'required|string|max:2',
+            'addresses.*.label'        => 'nullable|string|max:255',
+            'addresses.*.cep'          => 'nullable|string|size:8',
+            'addresses.*.street'       => 'nullable|string|max:255',
+            'addresses.*.neighborhood' => 'nullable|string|max:255',
+            'addresses.*.city'         => 'nullable|string|max:255',
+            'addresses.*.state'        => 'nullable|string|max:2',
             'addresses.*.number'       => 'nullable|string|max:50',
             'addresses.*.complement'   => 'nullable|string|max:255',
             'addresses.*.note'         => 'nullable|string|max:500'

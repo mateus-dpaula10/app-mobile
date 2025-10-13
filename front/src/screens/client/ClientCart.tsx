@@ -119,7 +119,7 @@ export default function ClientCart() {
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      Alert.alert('Sucesso', 'Compra realizada com sucesso');
+      Alert.alert('Sucesso', 'Pedido criado com sucesso');
       setCart([]);
     } catch (err) {
       console.error(err);
@@ -150,7 +150,6 @@ export default function ClientCart() {
           {item.product.description}
         </Text>
 
-        {/* Exibe combinação de variações */}
         {item.variation_key && (
           <Text style={styles.variationKey}>{item.variation_key}</Text>
         )}
@@ -215,7 +214,7 @@ export default function ClientCart() {
                 </Text>
               </View>
               <TouchableOpacity style={styles.checkoutBtn} onPress={checkout}>
-                <Text style={styles.checkoutText}>Finalizar Compra</Text>
+                <Text style={styles.checkoutText}>Prosseguir para pagamento</Text>
               </TouchableOpacity>
             </View>
           }

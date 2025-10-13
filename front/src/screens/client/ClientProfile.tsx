@@ -19,6 +19,16 @@ import { useAuth } from '../../contexts/AuthContext';
 import { isStrongPassword } from '../../utils/validatePassword';
 import { Ionicons } from '@expo/vector-icons';
 
+const base64toBlob = (base64: string, mime: string) => {
+    const byteCharacters = atob(base64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], { type: mime });
+};
+
 type ImageFile = {
     uri: string;
     name: string;
@@ -42,14 +52,18 @@ type Address = {
 export default function ClientProfile() {
     const { user, refreshUser } = useAuth();
 
-    const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
+    const [name, setName] = useState(user?.name || '');
+    const [email, setEmail] = useState(user?.email || '');
     const [password, setPassword] = useState('');
     const [passwordConfirmation, setPasswordConfirmation] = useState('');
     const [passwordValid, setPasswordValid] = useState(true);
-    const [photo, setPhoto] = useState<ImageFile | null>(null);
+    const [photo, setPhoto] = useState<ImageFile | null>(
+        user?.photo
+        ? { uri: `http://192.168.0.79:8000/storage/${user?.photo}`, name: 'profile.jpg', type: 'image/jpeg', isNew: false }
+        : null
+    );
 
-    const [addresses, setAddresses] = useState<Address[]>([]);
+    const [addresses, setAddresses] = useState<Address[]>(user?.addresses || []);
     const [newAddress, setNewAddress] = useState<Address>({
         label: '',
         cep: '',
@@ -62,51 +76,48 @@ export default function ClientProfile() {
         note: ''
     });
 
-    useEffect(() => {
-        if (user) {
-            setName(user.name || '');
-            setEmail(user.email || '');
-            setAddresses(user.addresses || []);
-            if (user.photo) {
-                setPhoto({
-                    uri: `http://192.168.0.79:8000/storage/${user.photo}`,
-                    name: 'profile.jpg',
-                    type: 'image/jpeg',
-                    isNew: false
-                });
-            }
-        }
-    }, [user]);
-
     const pickImage = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
-            quality: 1
+            quality: 1,
+            base64: Platform.OS === 'web' ? true : false,
         });
 
         if (!result.canceled) {
             const asset = result.assets[0];
-            let uri = asset.uri;
-            let name = asset.fileName || `profile_${Date.now()}.jpg`;
-            let type = 'image/jpeg';
 
-            if (Platform.OS !== 'web' && asset.uri.startsWith('content://')) {
-                const fileName = asset.uri.split('/').pop();
-                const destPath = `${(FileSystem as any).cacheDirectory}${fileName}`;
-                await (FileSystem as any).copyAsync({ from: asset.uri, to: destPath });
-                uri = destPath;
+            if (Platform.OS === 'web' && asset.base64) {
+                const mimeType = asset.uri?.startsWith('data:') ? asset.uri.split(';')[0].replace('data:', '') : 'image/jpeg';
+                const blob = base64toBlob(asset.base64, mimeType);
+                const file = new File([blob], asset.fileName || `profile_${Date.now()}.jpg`, { type: mimeType });
+
+                setPhoto({
+                    uri: URL.createObjectURL(blob),
+                    name: file.name,
+                    type: file.type,
+                    isNew: true,
+                });
+            } else {
+                let localUri = asset.uri;
+
+                if (Platform.OS !== 'web' && asset.uri.startsWith('content://')) {
+                    const fileName = asset.uri.split('/').pop();
+                    const destPath = `${(FileSystem as any).cacheDirectory}${fileName}`;
+                    await (FileSystem as any).copyAsync({ from: asset.uri, to: destPath });
+                    localUri = destPath;
+                }
+
+                const ext = localUri.split('.').pop()?.toLowerCase() || 'jpg';
+                const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
+
+                setPhoto({
+                    uri: localUri,
+                    name: asset.fileName || `profile_${Date.now()}.${ext}`,
+                    type: mimeType,
+                    isNew: true,
+                });
             }
-
-            const ext = uri.split('.').pop()?.toLowerCase() || 'jpg';
-            type = ext === 'png' ? 'image/png' : 'image/jpeg';
-
-            setPhoto({
-                uri,
-                name,
-                type,
-                isNew: true
-            });
         }
     };
 
@@ -151,8 +162,25 @@ export default function ClientProfile() {
         Alert.alert('Sucesso', 'Endereço adicionado');
     };
 
-    const removeAddress = (index: number) => {
-        setAddresses(prev => prev.filter((_, i) => i !== index));
+    const removeAddress = async (index: number) => {
+        const addrToRemove = addresses[index];
+
+        if (addrToRemove.id) {
+            try {
+                const token = await AsyncStorage.getItem('@token');
+                if (!token) return;
+
+                await api.delete(`/clients/addresses/${addrToRemove.id}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
+                setAddresses(prev => prev.filter((_, i) => i !== index));
+                Alert.alert('Erro', 'Endereço removido com sucesso.');
+            } catch (error) {
+                console.error('Erro ao remover endereço:', error);
+                Alert.alert('Erro', 'Não foi possível remover o endereço.');
+            }
+        }
     };
 
     const handleSave = async () => {
@@ -173,8 +201,9 @@ export default function ClientProfile() {
         if (!token) return;
 
         const formData = new FormData();
-        formData.append('name', name.trim());
-        formData.append('email', email.trim());
+
+        formData.append('name', name);
+        formData.append('email', email);
 
         if (password) {
             formData.append('password', password);
@@ -182,27 +211,41 @@ export default function ClientProfile() {
         }
 
         if (photo?.isNew) {
-            formData.append('photo', {
-                uri: Platform.OS === 'android' ? photo.uri : photo.uri.replace('file://', ''),
-                name: photo.name,
-                type: photo.type
-            } as any);
+            if (Platform.OS === 'web') {
+                try {
+                    const blob = await fetch(photo.uri).then(res => res.blob());
+                    const file = new File([blob], photo.name, { type: photo.type });
+                    formData.append('photo', file);
+                } catch (err) {
+                    console.error('Erro ao processar foto web:', err);
+                }
+                } else {
+                formData.append('photo', {
+                    uri: photo.uri, 
+                    name: photo.name,
+                    type: photo.type,
+                } as any);
+            }
         }
 
-        formData.append('addresses', JSON.stringify(addresses));
+        addresses.forEach((addr, index) => {
+            Object.entries(addr).forEach(([key, value]) => {
+                formData.append(`addresses[${index}][${key}]`, value ? String(value) : '');
+            });
+        });
 
         try {
-            const res = await api.put('/clients/updateProfile', formData, {
+            await api.put('/clients/updateProfile', formData, {
                 headers: {
-                    'Content-Type': 'multipart/form-data',
                     Authorization: `Bearer ${token}`,
+                    'Content-Type': 'multipart/form-data'
                 }
             });
 
             await refreshUser();
             Alert.alert('Sucesso', 'Perfil atualizado com sucesso.');
-        } catch (err) {
-            console.error(err);
+        } catch (err: any) {
+            console.error('Erro ao salvar perfil:', err.response?.data || err);
             Alert.alert('Erro', 'Falha ao salvar perfil.');
         }
     };
@@ -211,6 +254,7 @@ export default function ClientProfile() {
         <KeyboardAvoidingView
             style={{ flex: 1 }}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
         >
             <ScrollView
                 contentContainerStyle={{ padding: 16, paddingBottom: 50 }}

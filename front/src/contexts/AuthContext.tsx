@@ -95,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = async () => {
     try {
+      const token = await AsyncStorage.getItem('@token');
       if (!token) return;
 
       const { data } = await api.get<User>("/clients/me", {
