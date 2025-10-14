@@ -18,6 +18,7 @@ import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { isStrongPassword } from '../../utils/validatePassword';
 import { Ionicons } from '@expo/vector-icons';
+import { useIsFocused } from '@react-navigation/native';
 
 const base64toBlob = (base64: string, mime: string) => {
     const byteCharacters = atob(base64);
@@ -59,7 +60,7 @@ export default function ClientProfile() {
     const [passwordValid, setPasswordValid] = useState(true);
     const [photo, setPhoto] = useState<ImageFile | null>(
         user?.photo
-        ? { uri: `http://192.168.0.72:8000/storage/${user?.photo}`, name: 'profile.jpg', type: 'image/jpeg', isNew: false }
+        ? { uri: `http://192.168.0.79:8000/storage/${user?.photo}`, name: 'profile.jpg', type: 'image/jpeg', isNew: false }
         : null
     );
 
@@ -76,48 +77,77 @@ export default function ClientProfile() {
         note: ''
     });
 
+    const isFocused = useIsFocused();
+
+    const loadUserData = async () => {
+        const updated = await refreshUser();
+
+        if (updated) {
+            setName(updated.name);
+            setEmail(updated.email);
+            setAddresses(updated.addresses || []);
+    
+            setPhoto(
+                updated.photo
+                    ? { uri: `http://192.168.0.79:8000/storage/${updated.photo}`, name: 'profile.jpg', type: 'image/jpeg', isNew: false }
+                    : null
+            );
+        }
+    };
+
+    useEffect(() => {
+        if (isFocused) {
+            loadUserData();
+        }
+    }, [isFocused]);
+
     const pickImage = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            quality: 1,
-            base64: Platform.OS === 'web' ? true : false,
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          quality: 1,
+          base64: Platform.OS === 'web' ? true : false,
         });
-
+    
         if (!result.canceled) {
-            const asset = result.assets[0];
-
-            if (Platform.OS === 'web' && asset.base64) {
-                const mimeType = asset.uri?.startsWith('data:') ? asset.uri.split(';')[0].replace('data:', '') : 'image/jpeg';
-                const blob = base64toBlob(asset.base64, mimeType);
-                const file = new File([blob], asset.fileName || `profile_${Date.now()}.jpg`, { type: mimeType });
-
-                setPhoto({
-                    uri: URL.createObjectURL(blob),
-                    name: file.name,
-                    type: file.type,
-                    isNew: true,
-                });
-            } else {
-                let localUri = asset.uri;
-
-                if (Platform.OS !== 'web' && asset.uri.startsWith('content://')) {
-                    const fileName = asset.uri.split('/').pop();
-                    const destPath = `${(FileSystem as any).cacheDirectory}${fileName}`;
-                    await (FileSystem as any).copyAsync({ from: asset.uri, to: destPath });
-                    localUri = destPath;
-                }
-
-                const ext = localUri.split('.').pop()?.toLowerCase() || 'jpg';
-                const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
-
-                setPhoto({
-                    uri: localUri,
-                    name: asset.fileName || `profile_${Date.now()}.${ext}`,
-                    type: mimeType,
-                    isNew: true,
-                });
+          const asset = result.assets[0];
+          let uri = asset.uri;
+          let name = asset.fileName || `image_profile_${Date.now()}.jpg`;
+          let type = 'image/jpeg';
+    
+          if (Platform.OS === 'web' && asset.base64) {
+            const mimeType = asset.uri?.startsWith('data:')
+              ? asset.uri.split(';')[0].replace('data:', '')
+              : 'image/jpeg';
+            const blob = base64toBlob(asset.base64, mimeType);
+            const file = new File([blob], name, { type: mimeType });
+            uri = URL.createObjectURL(blob);
+            type = mimeType;
+    
+            setPhoto({
+              uri,
+              name: file.name,
+              type: file.type,
+              isNew: true
+            });
+          } else {
+            if (Platform.OS !== 'web' && asset.uri.startsWith('content://')) {
+              const fileName = asset.uri.split('/').pop();
+              const destPath = `${(FileSystem as any).cacheDirectory}${fileName}`;
+              await (FileSystem as any).copyAsync({ from: asset.uri, to: destPath });
+              uri = destPath;
             }
+    
+            const ext = uri.split('.').pop()?.toLowerCase() || 'jpg';
+            type = ext === 'png' ? 'image/png' : 'image/jpeg';
+    
+            setPhoto({
+              uri,
+              name,
+              type,
+              isNew: true
+            });
+          }
         }
     };
 
@@ -219,7 +249,7 @@ export default function ClientProfile() {
                 } catch (err) {
                     console.error('Erro ao processar foto web:', err);
                 }
-                } else {
+            } else {
                 formData.append('photo', {
                     uri: photo.uri, 
                     name: photo.name,
@@ -235,15 +265,12 @@ export default function ClientProfile() {
         });
 
         try {
-            await api.put('/clients/updateProfile', formData, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'multipart/form-data'
-                }
+            formData.append('_method', 'PUT');
+            await api.post('/clients/updateProfile', formData, {
+                headers: { Authorization: `Bearer ${token}` }
             });
-
-            await refreshUser();
             Alert.alert('Sucesso', 'Perfil atualizado com sucesso.');
+            await refreshUser();
         } catch (err: any) {
             console.error('Erro ao salvar perfil:', err.response?.data || err);
             Alert.alert('Erro', 'Falha ao salvar perfil.');

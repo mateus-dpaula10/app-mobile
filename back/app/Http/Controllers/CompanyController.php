@@ -25,9 +25,6 @@ class CompanyController extends Controller
             'admin.email'                   => 'required|email|unique:users,email',
             'admin.name'                    => 'required|string|max:255',
             'admin.password'                => 'required|min:8',
-            'free_shipping'                 => 'boolean',
-            'first_purchase_discount_store' => 'boolean',
-            'first_purchase_discount_app'   => 'boolean',
         ], [
             'legal_name.required'        => 'O nome empresarial é obrigatório.',
             'final_name.required'        => 'O nome real da loja é obrigatório.',
@@ -48,10 +45,7 @@ class CompanyController extends Controller
             'cnpj', 
             'phone', 
             'address', 
-            'plan',
-            'free_shipping',
-            'first_purchase_discount_store',
-            'first_purchase_discount_app'
+            'plan'
         ]));
 
         $admin = new User([
@@ -92,18 +86,21 @@ class CompanyController extends Controller
         $company = $authUser->company;
 
         $request->validate([
-            'final_name'            => 'required|string|unique:companies,final_name,' . $company->id,
-            'phone'                 => 'nullable|string|max:20',
-            'email'                 => 'nullable|email|unique:companies,email,' . $company->id,
-            'category'              => 'nullable|string|max:255',
-            'status'                => 'nullable|in:active,suspended,pending',
-            'logo'                  => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-            'delivery_fee'          => 'nullable|numeric|min:0',
-            'delivery_radius'       => 'nullable|integer|min:1',
-            'opening_hours'         => 'nullable|array',
-            'opening_hours.*.day'   => 'required_with:opening_hours|string|max:20',
-            'opening_hours.*.open'  => 'required_with:opening_hours|string|max:5',
-            'opening_hours.*.close' => 'required_with:opening_hours|string|max:5',
+            'final_name'                    => 'required|string|unique:companies,final_name,' . $company->id,
+            'phone'                         => 'nullable|string|max:20',
+            'email'                         => 'nullable|email|unique:companies,email,' . $company->id,
+            'category'                      => 'nullable|string|max:255',
+            'status'                        => 'nullable|in:active,suspended,pending',
+            'logo'                          => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'delivery_fee'                  => 'nullable|numeric|min:0',
+            'delivery_radius'               => 'nullable|integer|min:1',
+            'free_shipping'                 => 'nullable|boolean',
+            'first_purchase_discount_store' => 'nullable|boolean',
+            'first_purchase_discount_app'   => 'nullable|boolean',
+            'opening_hours'                 => 'nullable|array',
+            'opening_hours.*.day'           => 'required_with:opening_hours|string|max:20',
+            'opening_hours.*.open'          => 'required_with:opening_hours|string|max:5',
+            'opening_hours.*.close'         => 'required_with:opening_hours|string|max:5',
         ], [
             'email.email'                         => 'O e-mail informado não é válido.',
             'email.unique'                        => 'Este e-mail já está sendo usado por outra empresa.',
@@ -135,8 +132,11 @@ class CompanyController extends Controller
         $company->email = $request->email ?? $company->email;
         $company->category = $request->category ?? $company->category;
         $company->status = $request->status ?? $company->status;
-        $company->delivery_fee = $request->delivery_fee ?? $company->delivery_fee;
-        $company->delivery_radius = $request->delivery_radius ?? $company->delivery_radius;
+        $company->delivery_fee = $request->delivery_fee !== '' ? $request->delivery_fee : null;
+        $company->delivery_radius = $request->delivery_radius !== '' ? $request->delivery_radius : null;
+        $company->free_shipping = $request->free_shipping ?? $company->free_shipping ?? false;
+        $company->first_purchase_discount_store = $request->first_purchase_discount_store ?? $company->first_purchase_discount_store ?? false;
+        $company->first_purchase_discount_app = $request->first_purchase_discount_app ?? $company->first_purchase_discount_app ?? false;
 
         if ($request->opening_hours) {
             $company->opening_hours = json_encode($request->opening_hours);
@@ -165,10 +165,7 @@ class CompanyController extends Controller
                 if (trim($value) === '') {
                     $fail('A senha não pode estar em branco.');
                 }
-            }],
-            'free_shipping'                 => 'boolean',
-            'first_purchase_discount_store' => 'boolean',
-            'first_purchase_discount_app'   => 'boolean'
+            }]
         ], [
             'legal_name.max'             => 'O nome empresarial não pode ter mais de :max caracteres.',
             'final_name.max'             => 'O nome real da loja não pode ter mais de :max caracteres.',
@@ -185,10 +182,7 @@ class CompanyController extends Controller
             'cnpj', 
             'phone', 
             'address', 
-            'plan',
-            'free_shipping',
-            'first_purchase_discount_store',
-            'first_purchase_discount_app'
+            'plan'
         ]));
 
         if ($request->has('admin') && $company->admin) {

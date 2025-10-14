@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { 
   View, Text, TextInput, Button, Image, StyleSheet, 
   KeyboardAvoidingView, Platform, ScrollView, Alert, TouchableOpacity, 
-  FlatList
+  FlatList,
+  Switch
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -45,6 +46,9 @@ export default function StoreProfile() {
   const [status, setStatus] = useState<string>('active');
   const [deliveryFee, setDeliveryFee] = useState('');
   const [deliveryRadius, setDeliveryRadius] = useState('');
+  const [freeShipping, setFreeShipping] = useState(false);
+  const [firstPurchaseDiscountStore, setFirstPurchaseDiscountStore] = useState(false);
+  const [firstPurchaseDiscountApp, setFirstPurchaseDiscountApp] = useState(false);
   const [logo, setLogo] = useState<ImageFile | null>(null);
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
 
@@ -90,6 +94,9 @@ export default function StoreProfile() {
       setStatus(company.status || 'active');
       setDeliveryFee(company.delivery_fee != null ? Number(company.delivery_fee).toFixed(2).replace('.', ',') : '');
       setDeliveryRadius(company.delivery_radius != null ? String(company.delivery_radius) : '');
+      setFreeShipping(company.free_shipping ?? false);
+      setFirstPurchaseDiscountStore(company.first_purchase_discount_store ?? false);
+      setFirstPurchaseDiscountApp(company.first_purchase_discount_app ?? false);
 
       let hours: OpeningHour[] = [];
       if (company.opening_hours) {
@@ -108,7 +115,7 @@ export default function StoreProfile() {
 
       if (company.logo) {
         setLogo({
-          uri: `http://192.168.0.72:8000/storage/${company.logo}`,
+          uri: `http://192.168.0.79:8000/storage/${company.logo}`,
           name: 'logo.jpg',
           type: 'image/jpeg',
           isNew: false
@@ -191,11 +198,14 @@ export default function StoreProfile() {
     formData.append('status', status);
     formData.append('delivery_fee', deliveryFee);
     formData.append('delivery_radius', deliveryRadius);
+    formData.append('free_shipping', freeShipping ? '1' : '0');
+    formData.append('first_purchase_discount_store', firstPurchaseDiscountStore ? '1' : '0');
+    formData.append('first_purchase_discount_app', firstPurchaseDiscountApp ? '1' : '0');
 
     openingHours.forEach((h, index) => {
-        formData.append(`opening_hours[${index}][day]`, h.day);
-        formData.append(`opening_hours[${index}][open]`, h.open);
-        formData.append(`opening_hours[${index}][close]`, h.close);
+      formData.append(`opening_hours[${index}][day]`, h.day);
+      formData.append(`opening_hours[${index}][open]`, h.open);
+      formData.append(`opening_hours[${index}][close]`, h.close);
     });
 
     if (logo?.isNew) {
@@ -307,8 +317,59 @@ export default function StoreProfile() {
             </Picker>
           </View>
 
-          <TextInput style={styles.input} placeholder="Taxa de entrega (R$)" value={deliveryFee} onChangeText={setDeliveryFee} keyboardType="numeric" />
-          <TextInput style={styles.input} placeholder="Raio de entrega (km)" value={deliveryRadius} onChangeText={setDeliveryRadius} keyboardType="numeric" />
+          <TextInput 
+            style={styles.input} 
+            placeholder="Taxa de entrega (R$)" 
+            value={deliveryFee} 
+            onChangeText={(text) => {
+              setDeliveryFee(text);
+              if (text) setFreeShipping(false);
+            }}
+          />
+          <TextInput 
+            style={styles.input} 
+            placeholder="Raio de entrega (km)" 
+            value={deliveryRadius} 
+            onChangeText={(text) => {
+              setDeliveryRadius(text);
+              if (text) setFreeShipping(false);
+            }} 
+          />
+
+          <View style={{ marginVertical: 12 }}>
+            <Text style={{ fontWeight: 'bold', marginBottom: 6 }}>Configurações da Loja</Text>
+
+            <View style={styles.switchRow}>
+              <Text>🚚 Frete grátis</Text>
+              <Switch
+                value={freeShipping}
+                onValueChange={(v) => {
+                  setFreeShipping(v);
+                  if (v) {
+                    setDeliveryFee('');
+                    setDeliveryRadius('');
+                  }
+                }}
+                disabled={!!deliveryFee || !!deliveryRadius}
+              />
+            </View>
+
+            <View style={styles.switchRow}>
+              <Text>🎉 Desc. 1ª compra (loja)</Text>
+              <Switch
+                value={firstPurchaseDiscountStore}
+                onValueChange={(v) => setFirstPurchaseDiscountStore(v)}
+              />
+            </View>
+
+            <View style={styles.switchRow}>
+              <Text>📱 Desc. 1ª compra (app)</Text>
+              <Switch
+                value={firstPurchaseDiscountApp}
+                onValueChange={(v) => setFirstPurchaseDiscountApp(v)}
+              />
+            </View>
+          </View>
 
           <TouchableOpacity style={styles.button} onPress={pickImage}>
             <Text style={styles.buttonText}>Selecionar logo</Text>
@@ -398,4 +459,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     gap: 4
   },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 6,
+    marginBottom: 8,
+    backgroundColor: '#fff',
+  }
 });

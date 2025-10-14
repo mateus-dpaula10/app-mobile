@@ -31,6 +31,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/cart', [ProductController::class, 'getCart'])->name('product.getCart');
     Route::post('/cart', [ProductController::class, 'addCart'])->name('product.addCart');
+    Route::post('/delivery/calc', [ProductController::class, 'calculate'])->name('product.calculate');
     Route::delete('/cart/items/{item}', [ProductController::class, 'removeItem'])->name('product.removeItem');
     Route::put('/cart/items/{item}/increment', [ProductController::class, 'incrementItem'])->name('product.incrementItem');
     Route::put('/cart/items/{item}/decrement', [ProductController::class, 'decrementItem'])->name('product.decrementItem');

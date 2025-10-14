@@ -34,15 +34,34 @@ type CartItem = {
   price: number;
   subtotal: number;
   variations: ProductVariation[];
-  variation_key?: string; // string "Tamanho:M | Sabor:Calabresa"
+  variation_key?: string; 
+};
+
+type Address = {
+  id?: number;
+  label: string;
+  cep: string;
+  street: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  number?: string;
+  complement?: string;
+  note?: string;
 };
 
 export default function ClientCart() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const isFocused = useIsFocused();
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
+  const [deliveryInfo, setDeliveryInfo] = useState<{ fee: number; distance: number } | null>(null);
 
   useEffect(() => {
-    if (isFocused) fetchCart();
+    if (isFocused) {
+      fetchCart();
+      fetchAddresses();
+    } 
   }, [isFocused]);
 
   const fetchCart = async () => {
@@ -61,6 +80,48 @@ export default function ClientCart() {
     } catch (err) {
       console.error('Erro ao carregar carrinho:', err);
       Alert.alert('Erro', 'Não foi possível carregar o carrinho');
+    }
+  };
+
+  const calculateDelivery = async (address: Address) => {
+    if (!address) return;
+
+    try {
+      const token = await AsyncStorage.getItem('@token');
+      if (!token) return;
+
+      const { data } = await api.post(
+        '/delivery/calc',
+        {
+          address: `${address.street}, ${address.number || ''} - ${address.neighborhood}, ${address.city} - ${address.state}, ${address.cep}`,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setDeliveryInfo({ fee: data.fee, distance: data.distance });
+    } catch (err) {
+      console.error('Erro ao calcular frete:', err);
+      setDeliveryInfo(null);
+    }
+  };
+
+  const fetchAddresses = async () => {
+    try {
+      const token = await AsyncStorage.getItem('@token');
+      if (!token) return;
+
+      const { data } = await api.get('/clients/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setAddresses(data.addresses || []);
+      
+      if (data.addresses?.length) {
+        setSelectedAddress(data.addresses[0]);
+        calculateDelivery(data.addresses[0]);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar endereços:', err);
     }
   };
 
@@ -101,7 +162,10 @@ export default function ClientCart() {
     }
   };
 
-  const getTotal = () => cart.reduce((sum, c) => sum + c.subtotal, 0);
+  const getTotal = () => {
+    const itemsTotal = cart.reduce((sum, c) => sum + c.subtotal, 0);
+    return deliveryInfo ? itemsTotal + deliveryInfo.fee : itemsTotal;
+  } 
 
   const checkout = async () => {
     if (!cart.length) return Alert.alert('Aviso', 'Seu carrinho está vazio');
@@ -132,7 +196,7 @@ export default function ClientCart() {
       {item.product.images?.length > 0 && (
         <Image
           source={{
-            uri: `http://192.168.0.72:8000/storage/${item.product.images[0].image_path}`,
+            uri: `http://192.168.0.79:8000/storage/${item.product.images[0].image_path}`,
           }}
           style={styles.image}
         />
@@ -196,6 +260,35 @@ export default function ClientCart() {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
     >
       <Text style={styles.title}>Meu Carrinho</Text>
+
+      {addresses.length > 0 && (
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ fontWeight: 'bold', marginBottom: 6 }}>Selecione o endereço de entrega:</Text>
+          {addresses.map(addr => (
+            <TouchableOpacity
+              key={addr.id}
+              onPress={() => {
+                setSelectedAddress(addr);
+                calculateDelivery(addr);
+              }}
+              style={{
+                padding: 10,
+                borderWidth: 1,
+                borderColor: selectedAddress?.id === addr.id ? '#007bff' : '#ccc',
+                borderRadius: 8,
+                marginBottom: 6,
+              }}
+            >
+              <Text>{`${addr.street}, ${addr.number || ''} - ${addr.neighborhood}, ${addr.city} - ${addr.state}, ${addr.cep}`}</Text>
+            </TouchableOpacity>
+          ))}
+          {deliveryInfo && (
+            <Text style={{ marginTop: 6, fontWeight: 'bold' }}>
+              Frete: R$ {deliveryInfo.fee.toFixed(2).replace('.', ',')} ({deliveryInfo.distance.toFixed(2)} km)
+            </Text>
+          )}
+        </View>
+      )}
 
       {cart.length === 0 ? (
         <Text style={styles.emptyCart}>Seu carrinho está vazio</Text>

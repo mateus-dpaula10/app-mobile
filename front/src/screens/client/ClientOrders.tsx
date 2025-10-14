@@ -99,7 +99,7 @@ export default function ClientOrders() {
         {product.images?.[0] && (
           <Image
             source={{
-              uri: `http://192.168.0.72:8000/storage/${product.images[0].image_path}`,
+              uri: `http://192.168.0.79:8000/storage/${product.images[0].image_path}`,
             }}
             style={styles.itemImage}
             resizeMode="cover"

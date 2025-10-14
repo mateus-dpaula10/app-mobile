@@ -31,7 +31,7 @@ type AuthContextType = {
   token: string | null;
   login: (user: User, token: string) => Promise<void>;
   logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
+  refreshUser: () => Promise<User | undefined>;
   loading: boolean;
 };
 
@@ -104,8 +104,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setUser(data);
       await AsyncStorage.setItem("@user", JSON.stringify(data));
+
+      return data;
     } catch (error) {
       console.error("Erro ao atualizar usuário:", error);
+      throw error;
     }
   };
 

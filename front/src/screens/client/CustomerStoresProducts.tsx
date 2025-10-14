@@ -203,7 +203,7 @@ export default function CustomerStoresProducts({ route }: any) {
           <View style={{ position: 'relative', width: '100%', height: 200 }}>
             <Image
               source={{
-                uri: `http://192.168.0.72:8000/storage/${product.images[currentIndex].image_path}`,
+                uri: `http://192.168.0.79:8000/storage/${product.images[currentIndex].image_path}`,
               }}
               style={{ width: '100%', height: '100%' }}
               resizeMode="cover"

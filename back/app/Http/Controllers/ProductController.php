@@ -367,6 +367,68 @@ class ProductController extends Controller
         ]);
     }
 
+    private function calculateDistance(string $clientAddress, string $companyAddress): float
+    {
+        $apiKey = env('GOOGLE_MAPS_API_KEY');
+
+        $clientAddressEncoded = urlencode($clientAddress);
+        $companyAddressEncoded = urlencode($companyAddress);
+
+        $url = "https://maps.googleapis.com/maps/api/distancematrix/json?origins={$clientAddressEncoded}&destinations={$companyAddressEncoded}&key={$apiKey}";
+
+        $response = file_get_contents($url);
+        $data = json_decode($response, true);
+
+        if (!isset($data['rows'][0]['elements'][0]['distance']['value'])) {
+            throw new \Exception('Não foi possível calcular a distância');
+        }
+
+        $distanceMeters = $data['rows'][0]['elements'][0]['distance']['value'];
+        $distanceKm = $distanceMeters / 1000;
+
+        return $distanceKm;
+    }
+
+    public function calculate(Request $request)
+    {
+        $authUser = auth()->user();
+        $address = $request->input('address');
+
+        $cart = Cart::where('user_id', $authUser->id)->first();
+
+        if (!$cart || $cart->items->isEmpty()) {
+            return response()->json(['error' => 'Carrinho vazio'], 422);
+        }
+
+        $fees = [];
+        $maxDistance = 0;
+
+        foreach ($cart->items as $item) {
+            $company = $item->product->company;
+
+            if (!$company) continue;
+
+            $distance = $this->calculateDistance($address, $company->address);
+            $maxDistance = max($maxDistance, $distance);
+
+            if ($distance > $company->delivery_radius) {
+                return response()->json([
+                    'error' => 'Endereço fora do raio de entrega da empresa ' . $company->name
+                ], 422);
+            }
+
+            $fee = $company->delivery_fee * ceil($distance / $company->delivery_radius);
+            $fees[] = $fee;
+        }
+
+        $totalFee = max($fees);
+
+        return response()->json([
+            'fee' => $totalFee,
+            'distance' => $maxDistance
+        ]);
+    }
+
     public function removeItem(CartItem $item)
     {
         $authUser = auth()->user();

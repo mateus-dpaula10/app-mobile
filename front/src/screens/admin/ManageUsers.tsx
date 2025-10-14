@@ -13,9 +13,6 @@ type Company = {
   phone: string;
   address: string;
   plan: string;
-  free_shipping?: boolean;
-  first_purchase_discount_store?: boolean;
-  first_purchase_discount_app?: boolean;
   weighable?: boolean;
   admin?: {
     name: string;
@@ -93,10 +90,7 @@ export default function ManageUsers() {
         final_name: "", 
         phone: "", 
         address: "", 
-        plan: "",
-        free_shipping: false,
-        first_purchase_discount_store: false,
-        first_purchase_discount_app: false,
+        plan: ""
       });
       setAdmin({ name: "", email: "", password: "" });
       loadCompanies();
@@ -114,10 +108,7 @@ export default function ManageUsers() {
         final_name: company.final_name ?? "",
         phone: company.phone ?? "",
         address: company.address ?? "",
-        plan: company.plan ?? "",
-        free_shipping: company.free_shipping ?? false,
-        first_purchase_discount_store: company.first_purchase_discount_store ?? false,
-        first_purchase_discount_app: company.first_purchase_discount_app ?? false,
+        plan: company.plan ?? ""
     });
 
     if (company.admin) {
@@ -205,32 +196,6 @@ export default function ManageUsers() {
               value={company.final_name} 
               onChangeText={v => setCompany(c => ({ ...c, final_name: v }))} 
             />    
-
-            <Text style={styles.subtitle}>Configurações da Loja</Text>
-
-            <View style={styles.switchRow}>
-              <Text>🚚 Frete grátis</Text>
-              <Switch
-                value={company.free_shipping ?? false}
-                onValueChange={(v) => setCompany((c) => ({ ...c, free_shipping: v }))}
-              />
-            </View>
-
-            <View style={styles.switchRow}>
-              <Text>🎉 Desc. 1ª compra (loja)</Text>
-              <Switch
-                value={company.first_purchase_discount_store ?? false}
-                onValueChange={(v) => setCompany((c) => ({ ...c, first_purchase_discount_store: v }))}
-              />
-            </View>
-
-            <View style={styles.switchRow}>
-              <Text>📱 Desc. 1ª compra (app)</Text>
-              <Switch
-                value={company.first_purchase_discount_app ?? false}
-                onValueChange={(v) => setCompany((c) => ({ ...c, first_purchase_discount_app: v }))}
-              />
-            </View>
 
             <View style={styles.pickerWrapper}>
               <Picker
