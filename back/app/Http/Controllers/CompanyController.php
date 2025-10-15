@@ -78,54 +78,63 @@ class CompanyController extends Controller
     public function addInfo(Request $request)
     {
         $authUser = auth()->user();
+        $company = $authUser->company;
 
         $request->merge([
             'delivery_fee' => str_replace(',', '.', $request->delivery_fee)
         ]);
 
-        $company = $authUser->company;
-
         $request->validate([
-            'final_name'                    => 'required|string|unique:companies,final_name,' . $company->id,
-            'phone'                         => 'nullable|string|max:20',
-            'email'                         => 'nullable|email|unique:companies,email,' . $company->id,
-            'category'                      => 'nullable|string|max:255',
-            'status'                        => 'nullable|in:active,suspended,pending',
-            'logo'                          => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-            'delivery_fee'                  => 'nullable|numeric|min:0',
-            'delivery_radius'               => 'nullable|integer|min:1',
-            'free_shipping'                 => 'nullable|boolean',
-            'first_purchase_discount_store' => 'nullable|boolean',
-            'first_purchase_discount_app'   => 'nullable|boolean',
-            'opening_hours'                 => 'nullable|array',
-            'opening_hours.*.day'           => 'required_with:opening_hours|string|max:20',
-            'opening_hours.*.open'          => 'required_with:opening_hours|string|max:5',
-            'opening_hours.*.close'         => 'required_with:opening_hours|string|max:5',
+            'final_name'                          => 'required|string|unique:companies,final_name,' . $company->id,
+            'phone'                               => 'nullable|string|max:20',
+            'email'                               => 'nullable|email|unique:companies,email,' . $company->id,
+            'category'                            => 'nullable|string|max:255',
+            'status'                              => 'nullable|in:active,suspended,pending',
+            'logo'                                => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'delivery_fee'                        => 'nullable|numeric|min:0',
+            'delivery_radius'                     => 'nullable|integer|min:1',
+            'free_shipping'                       => 'nullable|boolean',
+            'first_purchase_discount_store'       => 'nullable|boolean',
+            'first_purchase_discount_store_value' => 'nullable|integer|in:15,20,25',
+            'first_purchase_discount_app'         => 'nullable|boolean',
+            'first_purchase_discount_app_value'   => 'nullable|integer|in:15,20,25',
+            'opening_hours'                       => 'nullable|array',
+            'opening_hours.*.day'                 => 'required_with:opening_hours|string|max:20',
+            'opening_hours.*.open'                => 'required_with:opening_hours|string|max:5',
+            'opening_hours.*.close'               => 'required_with:opening_hours|string|max:5',
         ], [
-            'email.email'                         => 'O e-mail informado não é válido.',
-            'email.unique'                        => 'Este e-mail já está sendo usado por outra empresa.',
-            'category.string'                     => 'A categoria deve ser uma string.',
-            'category.max'                        => 'A categoria não pode ter mais de :max caracteres.',
-            'status.in'                           => 'Status inválido. Deve ser: active, suspended ou pending.',
-            'logo.image'                          => 'O arquivo deve ser uma imagem.',
-            'logo.mimes'                          => 'O logo deve ser JPG, JPEG ou PNG.',
-            'logo.max'                            => 'O logo não pode ter mais de 2MB.',
-            'delivery_fee.numeric'                => 'A taxa de entrega deve ser numérica.',
-            'delivery_fee.min'                    => 'A taxa de entrega não pode ser negativa.',
-            'delivery_radius.integer'             => 'O raio de entrega deve ser um número inteiro.',
-            'delivery_radius.min'                 => 'O raio de entrega deve ser pelo menos 1 km.',
-            'opening_hours.array'                 => 'O horário de funcionamento deve ser um array.',
-            'opening_hours.*.day.required_with'   => 'O dia é obrigatório para horário de funcionamento.',
-            'opening_hours.*.open.required_with'  => 'O horário de abertura é obrigatório para o dia informado.',
-            'opening_hours.*.close.required_with' => 'O horário de fechamento é obrigatório para o dia informado.',
-            'opening_hours.*.day.max'             => 'O nome do dia não pode ter mais de :max caracteres.',
-            'opening_hours.*.open.max'            => 'O horário de abertura deve ter no máximo :max caracteres.',
-            'opening_hours.*.close.max'           => 'O horário de fechamento deve ter no máximo :max caracteres.',
+            'email.email'                            => 'O e-mail informado não é válido.',
+            'email.unique'                           => 'Este e-mail já está sendo usado por outra empresa.',
+            'category.string'                        => 'A categoria deve ser uma string.',
+            'category.max'                           => 'A categoria não pode ter mais de :max caracteres.',
+            'status.in'                              => 'Status inválido. Deve ser: active, suspended ou pending.',
+            'logo.image'                             => 'O arquivo deve ser uma imagem.',
+            'logo.mimes'                             => 'O logo deve ser JPG, JPEG ou PNG.',
+            'logo.max'                               => 'O logo não pode ter mais de 2MB.',
+            'delivery_fee.numeric'                   => 'A taxa de entrega deve ser numérica.',
+            'delivery_fee.min'                       => 'A taxa de entrega não pode ser negativa.',
+            'delivery_radius.integer'                => 'O raio de entrega deve ser um número inteiro.',
+            'delivery_radius.min'                    => 'O raio de entrega deve ser pelo menos 1 km.',
+            'opening_hours.array'                    => 'O horário de funcionamento deve ser um array.',
+            'opening_hours.*.day.required_with'      => 'O dia é obrigatório para horário de funcionamento.',
+            'opening_hours.*.open.required_with'     => 'O horário de abertura é obrigatório para o dia informado.',
+            'opening_hours.*.close.required_with'    => 'O horário de fechamento é obrigatório para o dia informado.',
+            'opening_hours.*.day.max'                => 'O nome do dia não pode ter mais de :max caracteres.',
+            'opening_hours.*.open.max'               => 'O horário de abertura deve ter no máximo :max caracteres.',
+            'opening_hours.*.close.max'              => 'O horário de fechamento deve ter no máximo :max caracteres.',
+            'first_purchase_discount_store_value.in' => 'O desconto da loja deve ser 15%, 20% ou 25%.',
+            'first_purchase_discount_app_value.in'   => 'O desconto do app deve ser 15%, 20% ou 25%.'
         ]);
 
         if ($request->hasFile('logo')) {
             $path = $request->file('logo')->store('logos', 'public');
             $company->logo = $path;
+        }
+
+        if ($request['first_purchase_discount_store'] && $request['first_purchase_discount_app']) {
+            return response()->json([
+                'message' => 'Apenas um tipo de desconto de primeira compra pode estar ativo.'
+            ], 422);
         }
 
         $company->final_name = $request->final_name ?? $company->final_name;
@@ -135,8 +144,13 @@ class CompanyController extends Controller
         $company->delivery_fee = $request->delivery_fee !== '' ? $request->delivery_fee : null;
         $company->delivery_radius = $request->delivery_radius !== '' ? $request->delivery_radius : null;
         $company->free_shipping = $request->free_shipping ?? $company->free_shipping ?? false;
-        $company->first_purchase_discount_store = $request->first_purchase_discount_store ?? $company->first_purchase_discount_store ?? false;
-        $company->first_purchase_discount_app = $request->first_purchase_discount_app ?? $company->first_purchase_discount_app ?? false;
+
+        $company->first_purchase_discount_store = $request->first_purchase_discount_store ?? false;
+        $company->first_purchase_discount_store_value = $request->first_purchase_discount_store ? $request->first_purchase_discount_store_value : null;
+
+        $company->first_purchase_discount_app = $request->first_purchase_discount_app ?? false;
+        $company->first_purchase_discount_app_value = $request->first_purchase_discount_app ? $request->first_purchase_discount_app_value : null;
+
 
         if ($request->opening_hours) {
             $company->opening_hours = json_encode($request->opening_hours);

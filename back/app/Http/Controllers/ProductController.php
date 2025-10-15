@@ -223,13 +223,15 @@ class ProductController extends Controller
 
         $cart = $cartQuery->with([
             'items.product.images',
+            'items.product.company:id,legal_name,final_name,cnpj,phone,address,plan,active,email,category,status,logo,delivery_fee,delivery_radius,opening_hours,free_shipping,first_purchase_discount_store,first_purchase_discount_app',
             'items.variations', 
         ])->first();
 
         if (!$cart) {
             return response()->json([
                 'message' => 'Carrinho vazio',
-                'cart'    => null
+                'cart'    => null,
+                'company' => null
             ]);
         }
 
@@ -241,9 +243,9 @@ class ProductController extends Controller
             $variationKey = $item->variations->map(fn($v) => "{$v->type}:{$v->value}")->implode(' | ');
 
             return [
-                'id'        => $item->id,
-                'product_id'=> $item->product->id,
-                'product'   => [
+                'id'                 => $item->id,
+                'product_id'         => $item->product->id,
+                'product' => [
                     'id'             => $item->product->id,
                     'name'           => $item->product->name,
                     'description'    => $item->product->description,
@@ -255,10 +257,10 @@ class ProductController extends Controller
                         'image_path' => $img->image_path,
                     ]),
                 ],
-                'quantity'   => $item->quantity,
-                'price'      => $item->price,
-                'subtotal'   => $item->quantity * $item->price,
-                'variation_key' => $variationKey,
+                'quantity'           => $item->quantity,
+                'price'              => $item->price,
+                'subtotal'           => $item->quantity * $item->price,
+                'variation_key'      => $variationKey,
                 'variations' => $item->variations->map(fn($v) => [
                     'id'    => $v->id,
                     'type'  => $v->type,
@@ -266,6 +268,8 @@ class ProductController extends Controller
                 ]),
             ];
         });
+
+        $company = optional($cart->items->first()->product)->company;
 
         return response()->json([
             'message' => 'Carrinho recuperado com sucesso',
@@ -275,6 +279,7 @@ class ProductController extends Controller
                 'items'      => $items,
                 'total'      => $total,
             ],
+            'company' => $company
         ]);
     }
 
@@ -411,11 +416,11 @@ class ProductController extends Controller
             $distance = $this->calculateDistance($address, $company->address);
             $maxDistance = max($maxDistance, $distance);
 
-            if ($distance > $company->delivery_radius) {
-                return response()->json([
-                    'error' => 'Endereço fora do raio de entrega da empresa ' . $company->name
-                ], 422);
-            }
+            // if ($distance > $company->delivery_radius) {
+            //     return response()->json([
+            //         'error' => 'Endereço fora do raio de entrega da empresa ' . $company->name
+            //     ], 422);
+            // }
 
             $fee = $company->delivery_fee * ceil($distance / $company->delivery_radius);
             $fees[] = $fee;

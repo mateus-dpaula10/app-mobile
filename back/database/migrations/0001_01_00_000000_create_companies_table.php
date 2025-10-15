@@ -26,7 +26,9 @@ return new class extends Migration
             
             $table->boolean('free_shipping')->default(false);
             $table->boolean('first_purchase_discount_store')->default(false);
+            $table->tinyInteger('first_purchase_discount_store_value')->nullable();
             $table->boolean('first_purchase_discount_app')->default(false);
+            $table->tinyInteger('first_purchase_discount_app_value')->nullable();
 
             $table->string('logo')->nullable();
             $table->decimal('delivery_fee', 8, 2)->nullable();

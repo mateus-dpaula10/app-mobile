@@ -50,8 +50,32 @@ type Address = {
   note?: string;
 };
 
+type Company = {
+  id: number;
+  legal_name: string;
+  final_name: string;
+  cnpj: string;
+  phone: string;
+  address: string;
+  plan: string | null;
+  active: boolean;
+  email: string;
+  category: string | null;
+  status: string | null;
+  logo: string | null;
+  delivery_fee: number;
+  delivery_radius: number;
+  opening_hours: string | null;
+  free_shipping: boolean;
+  first_purchase_discount_store: number | null;
+  first_purchase_discount_app: number | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export default function ClientCart() {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [company, setCompany] = useState<Company | null>(null);
   const isFocused = useIsFocused();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
@@ -67,15 +91,18 @@ export default function ClientCart() {
   const fetchCart = async () => {
     try {
       const token = await AsyncStorage.getItem('@token');
-      const response = await api.get('/cart', {
+      if (!token) return;
+
+      const { data } = await api.get('/cart', {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (response.data?.cart?.items) {
-        const items: CartItem[] = response.data.cart.items;
-        setCart(items);
+      if (data?.cart?.items?.length) {
+        setCart(data.cart.items);
+        setCompany(data.company || null);
       } else {
         setCart([]);
+        setCompany(null);
       }
     } catch (err) {
       console.error('Erro ao carregar carrinho:', err);
@@ -87,6 +114,11 @@ export default function ClientCart() {
     if (!address) return;
 
     try {
+      if (company?.free_shipping) {
+        setDeliveryInfo({ fee: 0, distance: 0 });
+        return;
+      }
+
       const token = await AsyncStorage.getItem('@token');
       if (!token) return;
 
@@ -284,7 +316,10 @@ export default function ClientCart() {
           ))}
           {deliveryInfo && (
             <Text style={{ marginTop: 6, fontWeight: 'bold' }}>
-              Frete: R$ {deliveryInfo.fee.toFixed(2).replace('.', ',')} ({deliveryInfo.distance.toFixed(2)} km)
+              {company?.free_shipping
+                ? 'Frete: Grátis'
+                : `Frete: R$ ${deliveryInfo.fee.toFixed(2).replace('.', ',')} (${deliveryInfo.distance.toFixed(2)} km)`
+              }
             </Text>
           )}
         </View>

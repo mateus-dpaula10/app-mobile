@@ -23,14 +23,18 @@ class Company extends Model
         'opening_hours',
         'free_shipping',
         'first_purchase_discount_store',
-        'first_purchase_discount_app'
+        'first_purchase_discount_store_value',
+        'first_purchase_discount_app',
+        'first_purchase_discount_app_value'
     ];
 
     protected $casts = [
-        'free_shipping'                 => 'boolean',
-        'first_purchase_discount_store' => 'boolean',
-        'first_purchase_discount_app'   => 'boolean',
-        'opening_hours'                 => 'array'
+        'free_shipping'                       => 'boolean',
+        'first_purchase_discount_store'       => 'boolean',
+        'first_purchase_discount_store_value' => 'integer',
+        'first_purchase_discount_app'         => 'boolean',
+        'first_purchase_discount_app_value'   => 'boolean',
+        'opening_hours'                       => 'array'
     ];
 
     public function admin()

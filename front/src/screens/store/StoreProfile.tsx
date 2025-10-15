@@ -48,7 +48,9 @@ export default function StoreProfile() {
   const [deliveryRadius, setDeliveryRadius] = useState('');
   const [freeShipping, setFreeShipping] = useState(false);
   const [firstPurchaseDiscountStore, setFirstPurchaseDiscountStore] = useState(false);
+  const [firstPurchaseDiscountStoreValue, setFirstPurchaseDiscountStoreValue] = useState<number | null>(null);
   const [firstPurchaseDiscountApp, setFirstPurchaseDiscountApp] = useState(false);
+  const [firstPurchaseDiscountAppValue, setFirstPurchaseDiscountAppValue] = useState<number | null>(null);
   const [logo, setLogo] = useState<ImageFile | null>(null);
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
 
@@ -186,6 +188,21 @@ export default function StoreProfile() {
   };
 
   const handleSave = async () => {
+    if (firstPurchaseDiscountStore && firstPurchaseDiscountApp) {
+      Alert.alert('Erro', 'Apenas um tipo de desconto pode estar ativo por vez.');
+      return;
+    }
+
+    if (firstPurchaseDiscountStore && !firstPurchaseDiscountStoreValue) {
+      Alert.alert('Erro', 'Selecione o percentual para o desconto da loja.');
+      return;
+    }
+
+    if (firstPurchaseDiscountApp && !firstPurchaseDiscountAppValue) {
+      Alert.alert('Erro', 'Selecione o percentual para o desconto do app.');
+      return;
+    }
+
     const token = await AsyncStorage.getItem('@token');
     if (!token) return;
 
@@ -199,8 +216,20 @@ export default function StoreProfile() {
     formData.append('delivery_fee', deliveryFee);
     formData.append('delivery_radius', deliveryRadius);
     formData.append('free_shipping', freeShipping ? '1' : '0');
+
     formData.append('first_purchase_discount_store', firstPurchaseDiscountStore ? '1' : '0');
+    if (firstPurchaseDiscountStore && firstPurchaseDiscountStoreValue) {
+      formData.append('first_purchase_discount_store_value', String(firstPurchaseDiscountStoreValue));
+    } else {
+      formData.append('first_purchase_discount_store_value', '');
+    }
+
     formData.append('first_purchase_discount_app', firstPurchaseDiscountApp ? '1' : '0');
+    if (firstPurchaseDiscountApp && firstPurchaseDiscountAppValue) {
+      formData.append('first_purchase_discount_app_value', String(firstPurchaseDiscountAppValue));
+    } else {
+      formData.append('first_purchase_discount_app_value', '');
+    }
 
     openingHours.forEach((h, index) => {
       formData.append(`opening_hours[${index}][day]`, h.day);
@@ -276,6 +305,28 @@ export default function StoreProfile() {
         if (!part2) return `(${ddd}) ${part1}`;
         return `(${ddd}) ${part1}-${part2}`;
       });
+    }
+  }
+
+  const handleToggleStore = (value: boolean) => {
+    setFirstPurchaseDiscountStore(value);    
+    if (value) {
+      setFirstPurchaseDiscountApp(false);
+      setFirstPurchaseDiscountAppValue(null);
+      setFirstPurchaseDiscountStoreValue(null);
+    } else {
+      setFirstPurchaseDiscountStoreValue(null);
+    }
+  }
+
+  const handleToggleApp = (value: boolean) => {
+    setFirstPurchaseDiscountApp(value);
+    if (value) {
+      setFirstPurchaseDiscountStore(false);
+      setFirstPurchaseDiscountStoreValue(null);
+      setFirstPurchaseDiscountAppValue(null);
+    } else {
+      setFirstPurchaseDiscountAppValue(null);
     }
   }
 
@@ -358,17 +409,41 @@ export default function StoreProfile() {
               <Text>🎉 Desc. 1ª compra (loja)</Text>
               <Switch
                 value={firstPurchaseDiscountStore}
-                onValueChange={(v) => setFirstPurchaseDiscountStore(v)}
+                onValueChange={handleToggleStore}
               />
             </View>
+
+            {firstPurchaseDiscountStore && (
+              <Picker
+                selectedValue={firstPurchaseDiscountStoreValue}
+                onValueChange={(value) => setFirstPurchaseDiscountStoreValue(Number(value))}
+              >
+                <Picker.Item label="Selecione..." value={null} />
+                <Picker.Item label="15%" value={15} />
+                <Picker.Item label="20%" value={20} />
+                <Picker.Item label="25%" value={25} />
+              </Picker>
+            )}
 
             <View style={styles.switchRow}>
               <Text>📱 Desc. 1ª compra (app)</Text>
               <Switch
                 value={firstPurchaseDiscountApp}
-                onValueChange={(v) => setFirstPurchaseDiscountApp(v)}
+                onValueChange={handleToggleApp}
               />
             </View>
+
+            {firstPurchaseDiscountApp && (
+              <Picker
+                selectedValue={firstPurchaseDiscountAppValue}
+                onValueChange={(value) => setFirstPurchaseDiscountAppValue(Number(value))}
+              >
+                <Picker.Item label="Selecione..." value={null} />
+                <Picker.Item label="15%" value={15} />
+                <Picker.Item label="20%" value={20} />
+                <Picker.Item label="25%" value={25} />
+              </Picker>
+            )}
           </View>
 
           <TouchableOpacity style={styles.button} onPress={pickImage}>
@@ -470,5 +545,12 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginBottom: 8,
     backgroundColor: '#fff',
+  },
+  discountSelect: {
+    marginTop: 12,
+  },
+  picker: {
+    borderWidth: 1,
+    borderColor: '#ccc',
   }
 });
