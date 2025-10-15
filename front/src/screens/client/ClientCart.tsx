@@ -67,8 +67,10 @@ type Company = {
   delivery_radius: number;
   opening_hours: string | null;
   free_shipping: boolean;
-  first_purchase_discount_store: number | null;
-  first_purchase_discount_app: number | null;
+  first_purchase_discount_store: boolean;
+  first_purchase_discount_store_value: number | null;
+  first_purchase_discount_app: boolean;
+  first_purchase_discount_app_value: number | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -80,6 +82,8 @@ export default function ClientCart() {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [deliveryInfo, setDeliveryInfo] = useState<{ fee: number; distance: number } | null>(null);
+  const [discountValue, setDiscountValue] = useState(0);
+  const [discountType, setDiscountType] = useState<string | null>(null);
 
   useEffect(() => {
     if (isFocused) {
@@ -100,6 +104,17 @@ export default function ClientCart() {
       if (data?.cart?.items?.length) {
         setCart(data.cart.items);
         setCompany(data.company || null);
+
+        if (data.company?.first_purchase_discount_app) {
+          setDiscountValue(data.company.first_purchase_discount_app_value || 0);
+          setDiscountType('app');
+        } else if (data.company?.first_purchase_discount_store) {
+          setDiscountValue(data.company.first_purchase_discount_store_value || 0);
+          setDiscountType('store');
+        } else {
+          setDiscountValue(0);
+          setDiscountType(null);
+        }
       } else {
         setCart([]);
         setCompany(null);
@@ -195,19 +210,38 @@ export default function ClientCart() {
   };
 
   const getTotal = () => {
-    const itemsTotal = cart.reduce((sum, c) => sum + c.subtotal, 0);
-    return deliveryInfo ? itemsTotal + deliveryInfo.fee : itemsTotal;
-  } 
+    const itemsTotal = cart.reduce((sum, item) => sum + item.subtotal, 0);
+
+    let discountAmount = 0;
+    if (company) {
+      if (company.first_purchase_discount_store) {
+        discountAmount = itemsTotal * ((company.first_purchase_discount_store_value || 0) / 100);
+      } else if (company.first_purchase_discount_app) {
+        discountAmount = itemsTotal * ((company.first_purchase_discount_app_value || 0) / 100);
+      }
+    }
+
+    const fee = deliveryInfo ? deliveryInfo.fee : 0;
+
+    const total = itemsTotal - discountAmount + fee;
+    return total;
+  };
 
   const checkout = async () => {
     if (!cart.length) return Alert.alert('Aviso', 'Seu carrinho está vazio');
+
+    if (!selectedAddress) return Alert.alert('Aviso', 'Selecione um endereço de entrega antes de prosseguir.');
+
     try {
       const token = await AsyncStorage.getItem('@token');
+      const total = getTotal();
+
       await api.post(
         '/cart/checkout',
         {
+          address_id: selectedAddress.id,
+          total,
           items: cart.map(c => ({
-            id: c.id,
             product_id: c.product.id,
             quantity: c.quantity,
             variation_ids: c.variations.map(v => v.id),
@@ -293,7 +327,7 @@ export default function ClientCart() {
     >
       <Text style={styles.title}>Meu Carrinho</Text>
 
-      {addresses.length > 0 && (
+      {addresses.length > 0 && cart.length > 0 && (
         <View style={{ marginBottom: 16 }}>
           <Text style={{ fontWeight: 'bold', marginBottom: 6 }}>Selecione o endereço de entrega:</Text>
           {addresses.map(addr => (
@@ -336,9 +370,20 @@ export default function ClientCart() {
           ListFooterComponent={
             <View style={styles.footer}>
               <View style={styles.footerRow}>
-                <Text style={styles.totalLabel}>Total:</Text>
-                <Text style={styles.totalValue}>
-                  R$ {getTotal().toFixed(2).replace('.', ',')}
+                <Text>Subtotal: R$ {cart.reduce((s, c) => s + c.subtotal, 0).toFixed(2).replace('.', ',')}</Text>
+
+                {discountValue > 0 && (
+                  <Text style={{ color: 'green' }}>
+                    🎉 {discountValue}% de desconto ({discountType === 'app' ? 'App' : 'Loja'})
+                  </Text>
+                )}
+
+                {deliveryInfo && (
+                  <Text>Frete: R$ {deliveryInfo.fee.toFixed(2).replace('.', ',')}</Text>
+                )}
+
+                <Text style={styles.totalLabel}>
+                  Total: R$ {getTotal().toFixed(2).replace('.', ',')}
                 </Text>
               </View>
               <TouchableOpacity style={styles.checkoutBtn} onPress={checkout}>

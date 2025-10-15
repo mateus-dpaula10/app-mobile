@@ -223,7 +223,7 @@ class ProductController extends Controller
 
         $cart = $cartQuery->with([
             'items.product.images',
-            'items.product.company:id,legal_name,final_name,cnpj,phone,address,plan,active,email,category,status,logo,delivery_fee,delivery_radius,opening_hours,free_shipping,first_purchase_discount_store,first_purchase_discount_app',
+            'items.product.company:id,legal_name,final_name,cnpj,phone,address,plan,active,email,category,status,logo,delivery_fee,delivery_radius,opening_hours,free_shipping,first_purchase_discount_store,first_purchase_discount_store_value,first_purchase_discount_app,first_purchase_discount_app_value',
             'items.variations', 
         ])->first();
 
@@ -487,6 +487,27 @@ class ProductController extends Controller
     {
         $authUser = auth()->user();
 
+        $request->validate([
+            'items'              => 'required|array|min:1',
+            'items.*.product_id' => 'required|integer|exists:products,id',
+            'items.*.quantity'   => 'required|integer|min:1',
+            'address_id'         => 'required|integer|exists:addresses,id',
+        ],[
+            'items.required'              => 'É necessário informar ao menos um item no carrinho.',
+            'items.*.product_id.required' => 'Cada item deve conter o ID do produto.',
+            'items.*.product_id.exists'   => 'Um dos produtos informados não foi encontrado.',
+            'items.*.quantity.required'   => 'Informe a quantidade de cada produto.',
+            'items.*.quantity.min'        => 'A quantidade mínima é 1.',
+            'address_id.required'         => 'Selecione um endereço de entrega.',
+            'address_id.exists'           => 'O endereço selecionado não foi encontrado.'
+        ]);
+
+        $address = $authUser->addresses()->find($request->address_id);
+
+        if (!$address) {
+            return response()->json(['message' => 'Endereço inválido'], 422);
+        }
+
         $cart = Cart::with('items.product')->where('user_id', $authUser->id)->first();
 
         if (!$cart || $cart->items->isEmpty()) {
@@ -494,7 +515,7 @@ class ProductController extends Controller
         }
 
         foreach ($request->items as $product) {
-            $item = $cart->items->where('product_id', $product['id'])->first();
+            $item = $cart->items->where('product_id', $product['product_id'])->first();
             if ($item) {
                 $item->quantity = $product['quantity'];
                 $item->save();
@@ -514,11 +535,12 @@ class ProductController extends Controller
         }   
 
         $order = Order::create([
-            'user_id'  => $authUser->id,
-            'store_id' => $cart->items->first()->product->company_id,
-            'status'   => 'pending',
-            'code'     => strtoupper(Str::random(6)),
-            'total'    => $cart->items->sum(fn($i) => $i->quantity * $i->product->price)
+            'user_id'    => $authUser->id,
+            'store_id'   => $cart->items->first()->product->company_id,
+            'status'     => 'pending',
+            'code'       => strtoupper(Str::random(6)),
+            'total'      => $request->input('total'),
+            'address_id' => $address->id, 
         ]);
 
         foreach ($cart->items as $item) {
@@ -541,7 +563,7 @@ class ProductController extends Controller
     {
         $authUser = auth()->user();
 
-        $orders = Order::with(['items.product.images', 'store']) 
+        $orders = Order::with(['items.product.images', 'store', 'items.product.variations']) 
             ->where('user_id', $authUser->id)
             ->orderByDesc('id')
             ->get();

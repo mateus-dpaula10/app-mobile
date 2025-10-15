@@ -11,7 +11,8 @@ class Order extends Model
         'store_id',
         'status',
         'code',
-        'total'
+        'total',
+        'address_id'
     ];
 
     public function items()
@@ -32,5 +33,10 @@ class Order extends Model
     public function driver()
     {
         return $this->belongsTo(User::class, 'driver_id');
+    }
+
+    public function address()
+    {
+        return $this->belongsTo(Address::class);
     }
 }

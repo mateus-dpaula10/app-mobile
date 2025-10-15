@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('status')->default('pending');
             $table->string('code')->unique();
             $table->decimal('total', 10, 2)->default(0);
+            $table->foreignId('address_id')->constrained()->onDelete('cascade');
             $table->timestamps();
         });
     }

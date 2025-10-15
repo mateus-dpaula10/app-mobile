@@ -20,6 +20,8 @@ type ProductImage = {
   image_path: string;
 };
 
+type ProductVariation = { id: number; type: string; value: string };
+
 type Product = {
   id: number;
   name: string;
@@ -28,6 +30,7 @@ type Product = {
   stock_quantity: number;
   company_id: number;
   images: ProductImage[];
+  variations: ProductVariation[];
 };
 
 type OrderItem = {
@@ -35,6 +38,7 @@ type OrderItem = {
   product: Product;
   quantity: number;
   price: string | number;
+  variations: ProductVariation[];
 };
 
 type Store = {
@@ -91,8 +95,12 @@ export default function ClientOrders() {
   };
 
   const renderOrderItem = ({ item }: { item: OrderItem }) => {
-    const { product, quantity, price } = item;
+    const { product, quantity, price, variations } = item;
     const outOfStock = product.stock_quantity <= 0;
+
+    const variationText = variations?.length 
+      ? variations.map(v => `${v.type}: ${v.value}`).join(' | ')
+      : null;
 
     return (
       <View style={styles.itemContainer}>
@@ -107,13 +115,23 @@ export default function ClientOrders() {
         )}
         <View style={styles.itemContent}>
           <Text style={styles.itemTitle}>{product.name}</Text>
+
+          {variationText && (
+            <Text style={styles.itemVariation}>
+              {variationText}
+            </Text>
+          )}
+
           <Text style={styles.itemDescription} numberOfLines={2}>
             {product.description}
           </Text>
+
           <Text style={styles.itemPrice}>
             Preço unitário: R$ {Number(price).toFixed(2).replace('.', ',')}
           </Text>
+
           <Text style={styles.itemQuantity}>Quantidade: {quantity}</Text>
+
           {outOfStock && (
             <Text style={styles.itemOutOfStock}>Esgotado</Text>
           )}
@@ -243,5 +261,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#e11d48',
     fontWeight: '700',
+  },
+  itemVariation: {
+    fontSize: 13,
+    color: '#555',
+    marginBottom: 4,
+    fontStyle: 'italic',
   },
 });

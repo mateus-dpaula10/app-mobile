@@ -33,7 +33,7 @@ class Company extends Model
         'first_purchase_discount_store'       => 'boolean',
         'first_purchase_discount_store_value' => 'integer',
         'first_purchase_discount_app'         => 'boolean',
-        'first_purchase_discount_app_value'   => 'boolean',
+        'first_purchase_discount_app_value'   => 'integer',
         'opening_hours'                       => 'array'
     ];
 
