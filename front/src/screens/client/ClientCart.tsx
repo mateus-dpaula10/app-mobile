@@ -230,7 +230,7 @@ export default function ClientCart() {
   const checkout = async () => {
     if (!cart.length) return Alert.alert('Aviso', 'Seu carrinho está vazio');
 
-    if (!selectedAddress) return Alert.alert('Aviso', 'Selecione um endereço de entrega antes de prosseguir.');
+    if (!selectedAddress) return Alert.alert('Aviso', 'Selecione um endereço acima. Caso não apareça, adicione um ao seu perfil.');
 
     try {
       const token = await AsyncStorage.getItem('@token');
@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     marginTop: 12,
   },
-  footerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  footerRow: { flexDirection: 'column', justifyContent: 'space-between', marginBottom: 12, gap: '10' },
   totalLabel: { fontWeight: 'bold', fontSize: 16 },
   totalValue: { fontWeight: 'bold', fontSize: 16 },
   checkoutBtn: {

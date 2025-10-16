@@ -227,12 +227,6 @@ class CompanyController extends Controller
     
     public function companies()
     {
-        $now = now();
-        $daysOfWeek = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
-
-        $currentDay = $daysOfWeek[$now->dayOfWeekIso - 1];
-        $currentHour = (int) $now->format('H');
-
         $companies = Company::with(['products' => function ($query) {
             $query->where('stock_quantity', '>', 0)
                 ->where('status', 'ativo')
@@ -243,25 +237,7 @@ class CompanyController extends Controller
             $query->where('stock_quantity', '>', 0)
                 ->where('status', 'ativo');
         })
-        ->get()
-        ->filter(function ($company) use ($currentDay, $currentHour) {
-            if (!$company->opening_hours) return true;
-
-            $hours = json_decode($company->opening_hours, true);
-
-            foreach ($hours as $h) {
-                if ($h['day'] === $currentDay) {
-                    $open = (int) $h['open'];
-                    $close = (int) $h['close'];
-                    if ($currentHour >= $open && $currentHour < $close) {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        })
-        ->values();
+        ->get();
         
         return response()->json($companies);
     }

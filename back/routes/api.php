@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\DriverOrderController;
+use Illuminate\Support\Facades\Http;
 
 Route::post('/login', [AuthController::class, 'login'])->name('auth.login');
 Route::post('/register', [AuthController::class, 'register'])->name('auth.register');
@@ -44,4 +45,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/orders-driver', [DriverOrderController::class, 'index'])->name('driver.order.index');
     Route::patch('/orders-driver/{order}/accept', [DriverOrderController::class, 'acceptOrder'])->name('driver.order.acceptOrder');
     Route::patch('/orders-driver/{order}/status', [DriverOrderController::class, 'updateStatus'])->name('driver.order.updateStatus');
+
+    Route::get('/cep/{cep}', function ($cep) {
+        $cep = preg_replace('/\D/', '', $cep);
+        if (strlen($cep) !== 8) {
+            return response()->json(['erro' => 'CEP inválido'], 400);
+        }
+        $response = Http::get("https://viacep.com.br/ws/{$cep}/json/");
+        if ($response->failed() || isset($response['erro'])) {
+            return response()->json(['erro' => 'CEP não encontrado'], 404);
+        }
+        return $response->json();
+    });
 });

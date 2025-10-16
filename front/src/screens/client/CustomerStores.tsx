@@ -9,7 +9,20 @@ import { useIsFocused } from '@react-navigation/native';
 
 type ProductImage = { id: number; product_id: number; image_path: string; };
 type Product = { id: number; name: string; description: string; price: number; stock_quantity: number; company_id: number; images: ProductImage[]; };
-type Store = { id: number; legal_name: string; final_name: string; cnpj: string; phone: string; address: string; plan: string; active: boolean; category: string; logo?: string; products: Product[]; };
+type Store = { 
+  id: number; 
+  legal_name: string; 
+  final_name: string; 
+  cnpj: string; 
+  phone: string; 
+  address: string; 
+  plan: string; 
+  active: boolean; 
+  category: string; 
+  logo?: string; 
+  products: Product[]; 
+  opening_hours?: string;
+};
 type RootStackParamList = { CustomerStores: undefined; CustomerStoresProducts: { store: Store } };
 type Props = NativeStackScreenProps<RootStackParamList, 'CustomerStores'>;
 
@@ -54,15 +67,16 @@ export default function CustomerStores({ navigation }: Props) {
     }
   }, [isFocused]);
 
-  const filteredStores = stores.filter(store => {
-    const searchLower = search.toLowerCase();
-    const matchesStoreName = store.final_name.toLowerCase().includes(searchLower);
-    const matchesProductName = store.products.some(product =>
-      product.name.toLowerCase().includes(searchLower)
-    );
-    const matchesCategory = !selectedCategory || store.category === selectedCategory;
-    return (search === '' || matchesStoreName || matchesProductName) && matchesCategory;
-  });
+  const filteredStores = stores
+    .filter(store => {
+      const searchLower = search.toLowerCase();
+      const matchesStoreName = store.final_name.toLowerCase().includes(searchLower);
+      const matchesProductName = store.products.some(product =>
+        product.name.toLowerCase().includes(searchLower)
+      );
+      const matchesCategory = !selectedCategory || store.category === selectedCategory;
+      return (search === '' || matchesStoreName || matchesProductName) && matchesCategory;
+    });
 
   function formatPhone(phone: string) {
     if (!phone) return '';
@@ -72,17 +86,59 @@ export default function CustomerStores({ navigation }: Props) {
     return phone;
   }
 
-  const renderStoreCard = (store: Store) => (
-    <View key={store.id} style={styles.storeCard}>
-      {store.logo && <Image source={{ uri: `http://192.168.0.79:8000/storage/${store.logo.replace(/^\/+/, '')}` }} style={styles.storeLogo} />}
-      <Text style={styles.storeName}>{store.final_name}</Text>
-      {store.phone && <Text style={styles.storeInfo}>Telefone: {formatPhone(store.phone)}</Text>}
-      {store.address && <Text style={styles.storeInfo}>Endereço: {store.address}</Text>}
-      <TouchableOpacity style={styles.storeButton} onPress={() => navigation.navigate('CustomerStoresProducts', { store })}>
-        <Text style={styles.storeButtonText}>Ver produtos</Text>
-      </TouchableOpacity>
-    </View>
-  );
+  const renderStoreCard = (store: Store) => {
+    const isStoreOpen = () => {
+      if (!store.opening_hours) return true;
+
+      const daysOfWeek = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+      const now = new Date();
+      const currentDay = daysOfWeek[now.getDay()];
+      const currentHour = now.getHours();
+
+      try {
+        const hours = JSON.parse(store.opening_hours);
+        for (let h of hours) {
+          if (h.day === currentDay) {
+            const open = parseInt(h.open, 10);
+            const close = parseInt(h.close, 10);
+            if (currentHour >= open && currentHour < close) {
+              return true;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Erro ao ler horários:', e);
+      }
+
+      return false;
+    };
+
+    const openNow = isStoreOpen();
+
+    return (
+      <View key={store.id} style={[styles.storeCard, !openNow && { opacity: 0.5 }]}>
+        {store.logo && ( 
+          <Image 
+            source={{ uri: `http://192.168.0.79:8000/storage/${store.logo.replace(/^\/+/, '')}` }} 
+            style={styles.storeLogo} 
+          />
+        )}
+        <Text style={styles.storeName}>{store.final_name}</Text>
+        {store.phone && <Text style={styles.storeInfo}>Telefone: {formatPhone(store.phone)}</Text>}
+        {store.address && <Text style={styles.storeInfo}>Endereço: {store.address}</Text>}
+
+        <TouchableOpacity 
+          style={[styles.storeButton, !openNow && { backgroundColor: '#ccc' }]} 
+          onPress={() => openNow && navigation.navigate('CustomerStoresProducts', { store })}
+          activeOpacity={openNow ? 0.7 : 1}
+        >
+          <Text style={styles.storeButtonText}>
+            {openNow ? 'Ver produtos' : 'Fechada no momento'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    )
+  };
 
   return (
     <KeyboardAvoidingView

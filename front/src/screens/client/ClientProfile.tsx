@@ -156,8 +156,9 @@ export default function ClientProfile() {
         if (cleanedCep.length !== 8) return;
 
         try {
-            const res = await fetch(`https://viacep.com.br/ws/${cleanedCep}/json/`);
-            const data = await res.json();
+            const res = await api.get(`/cep/${cleanedCep}`);
+            const data = res.data;
+
             if (!data.erro) {
                 setNewAddress(prev => ({
                     ...prev,
@@ -166,9 +167,11 @@ export default function ClientProfile() {
                     city: data.localidade,
                     state: data.uf
                 }));
+            } else {
+                console.warn('CEP não encontrado');
             }
         } catch (err) {
-            console.error(err);
+            console.error('Erro ao buscar CEP:', err);
         }
     };
 
