@@ -102,6 +102,8 @@ class CompanyController extends Controller
             'opening_hours.*.day'                 => 'required_with:opening_hours|string|max:20',
             'opening_hours.*.open'                => 'required_with:opening_hours|string|max:5',
             'opening_hours.*.close'               => 'required_with:opening_hours|string|max:5',
+            'pix_key'                             => 'nullable|string|max:255',
+            'pix_key_type'                        => 'nullable|in:cpf,cnpj,email,phone,random'
         ], [
             'email.email'                            => 'O e-mail informado não é válido.',
             'email.unique'                           => 'Este e-mail já está sendo usado por outra empresa.',
@@ -123,7 +125,9 @@ class CompanyController extends Controller
             'opening_hours.*.open.max'               => 'O horário de abertura deve ter no máximo :max caracteres.',
             'opening_hours.*.close.max'              => 'O horário de fechamento deve ter no máximo :max caracteres.',
             'first_purchase_discount_store_value.in' => 'O desconto da loja deve ser 15%, 20% ou 25%.',
-            'first_purchase_discount_app_value.in'   => 'O desconto do app deve ser 15%, 20% ou 25%.'
+            'first_purchase_discount_app_value.in'   => 'O desconto do app deve ser 15%, 20% ou 25%.',
+            'pix_key.max'                            => 'A chave PIX não pode ter mais de :max caracteres.',
+            'pix_key_type.in'                        => 'Tipo da chave PIX inválido.'
         ]);
 
         if ($request->hasFile('logo')) {
@@ -151,10 +155,12 @@ class CompanyController extends Controller
         $company->first_purchase_discount_app = $request->first_purchase_discount_app ?? false;
         $company->first_purchase_discount_app_value = $request->first_purchase_discount_app ? $request->first_purchase_discount_app_value : null;
 
-
         if ($request->opening_hours) {
             $company->opening_hours = json_encode($request->opening_hours);
         }
+
+        $company->pix_key = $request->pix_key ?? $company->pix_key;
+        $company->pix_key_type = $request->pix_key_type ?? $company->pix_key_type;
 
         $company->save();
 

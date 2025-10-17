@@ -16,7 +16,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "../../contexts/AuthContext";
 import api from "../../services/api";
-import logo from "../../../assets/login.png"; 
+import logo from "../../../assets/Delivery Livre - Logo horizontal - azul  sem fundo.png"; 
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -115,10 +115,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0f0f0",
   },
   logo: {
-    width: "60%",
+    width: "100%",
     height: 120,
     alignSelf: "center",
-    marginBottom: 32,
+    marginBottom: 24,
   },
   input: {
     height: 50,

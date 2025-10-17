@@ -53,6 +53,8 @@ export default function StoreProfile() {
   const [firstPurchaseDiscountAppValue, setFirstPurchaseDiscountAppValue] = useState<number | null>(null);
   const [logo, setLogo] = useState<ImageFile | null>(null);
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
+  const [pixKey, setPixKey] = useState('');
+  const [pixKeyType, setPixKeyType] = useState('cpf');
 
   const categories = [
     'Supermercado',
@@ -117,7 +119,7 @@ export default function StoreProfile() {
 
       if (company.logo) {
         setLogo({
-          uri: `http://192.168.0.79:8000/storage/${company.logo}`,
+          uri: `https://infrasonic-fibular-pat.ngrok-free.dev/storage/${company.logo}`,
           name: 'logo.jpg',
           type: 'image/jpeg',
           isNew: false
@@ -211,6 +213,8 @@ export default function StoreProfile() {
     formData.append('phone', phone);
     formData.append('email', email);
     formData.append('address', address);
+    formData.append('pix_key', pixKey);
+    formData.append('pix_key_type', pixKeyType);
     formData.append('category', category);
     formData.append('status', status);
     formData.append('delivery_fee', deliveryFee);
@@ -349,6 +353,22 @@ export default function StoreProfile() {
           <TextInput style={styles.input} placeholder="Telefone" value={formatPhone(phone)} onChangeText={(text) => setPhone(text.replace(/\D/g, ""))} />
           <TextInput style={styles.input} placeholder="E-mail" value={email} onChangeText={setEmail} />
           <TextInput style={styles.input} placeholder="Endereço" value={address} onChangeText={setAddress} />
+
+          <Text style={styles.label}>Chave PIX</Text>
+          <View style={{ marginBottom: 8 }}>
+            <Picker selectedValue={pixKeyType} onValueChange={(v) => setPixKeyType(v)}>
+              <Picker.Item label="CPF" value="cpf" />
+              <Picker.Item label="CNPJ" value="cnpj" />
+              <Picker.Item label="E-mail" value="email" />
+              <Picker.Item label="Telefone" value="phone" />
+            </Picker>
+          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="Digite a chave PIX"
+            value={pixKey}
+            onChangeText={setPixKey}
+          />
 
           <Text style={styles.label}>Categoria</Text>
           <View style={styles.pickerWrapper}>

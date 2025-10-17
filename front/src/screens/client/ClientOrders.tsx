@@ -9,10 +9,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  TouchableOpacity,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../services/api';
 import { useIsFocused } from '@react-navigation/native';
+import QRCode from 'react-native-qrcode-svg';
 
 type ProductImage = {
   id: number;
@@ -59,6 +61,8 @@ type Order = {
 export default function ClientOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const isFocused = useIsFocused();
+  const [selectedPayment, setSelectedPayment] = useState<Record<number, 'pix' | 'cash' | null>>({});
+  const [pixCodes, setPixCodes] = useState<Record<number, { code: string; expiresAt: number }>>({});
 
   const fetchOrders = async () => {
     try {
@@ -76,6 +80,54 @@ export default function ClientOrders() {
   useEffect(() => {
     if (isFocused) fetchOrders();
   }, [isFocused]);
+
+  const getPixCode = async (orderId: number, orderCode: string) => {
+    try {
+      const token = await AsyncStorage.getItem('@token');
+      const response = await api.get(`/orders-driver/${orderId}/pix`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.data.pix_code) {
+        setPixCodes(prev => ({
+          ...prev,
+          [orderId]: {
+            code: response.data.pix_code,
+            expiresAt: response.data.expira_em,
+          },
+        }));
+      }
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Erro', 'Não foi possível gerar o código PIX');
+    }
+  };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Math.floor(Date.now() / 1000);
+
+      setPixCodes(prev => {
+        const updated = { ...prev };
+        for (const id in updated) {
+          if (updated[id].expiresAt <= now) {
+            delete updated[id];
+          }
+        }
+        return updated;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+
+  const handleSelectPayment = (orderId: number, method: 'pix' | 'cash', orderCode: string) => {
+    setSelectedPayment(prev => ({ ...prev, [orderId]: method }));
+    if (method === 'pix' && !pixCodes[orderId]) {
+      getPixCode(orderId, orderCode);
+    }
+  };
 
   const getStatusLabel = (status: string) => {
     switch (status) {
@@ -107,7 +159,7 @@ export default function ClientOrders() {
         {product.images?.[0] && (
           <Image
             source={{
-              uri: `http://192.168.0.79:8000/storage/${product.images[0].image_path}`,
+              uri: `https://infrasonic-fibular-pat.ngrok-free.dev/storage/${product.images[0].image_path}`,
             }}
             style={styles.itemImage}
             resizeMode="cover"
@@ -157,6 +209,54 @@ export default function ClientOrders() {
       <Text style={styles.orderTotal}>
         Total: R$ {Number(item.total).toFixed(2).replace('.', ',')}
       </Text>
+
+      <View style={{ flexDirection: 'row', marginTop: 8 }}>
+        <TouchableOpacity
+          style={{
+            padding: 8,
+            borderWidth: 1,
+            borderColor: selectedPayment[item.id] === 'cash' ? 'green' : '#ccc',
+            borderRadius: 6,
+            marginRight: 8,
+          }}
+          onPress={() => setSelectedPayment(prev => ({ ...prev, [item.id]: 'cash' }))}
+        >
+          <Text>💵 Retirada</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={{
+            padding: 8,
+            borderWidth: 1,
+            borderColor: selectedPayment[item.id] === 'pix' ? 'green' : '#ccc',
+            borderRadius: 6,
+          }}
+          onPress={() => handleSelectPayment(item.id, 'pix', item.code)}
+        >
+          <Text>📱 PIX</Text>
+        </TouchableOpacity>
+      </View>
+
+      {selectedPayment[item.id] === 'pix' && pixCodes[item.id] && (
+        <View style={{ marginTop: 36 }}>
+          <Text style={{ marginBottom: 6 }}>Pague via PIX usando este QR Code:</Text>
+          <QRCode value={pixCodes[item.id].code} size={180} />
+          {(() => {
+            const remaining = pixCodes[item.id].expiresAt - Math.floor(Date.now() / 1000);
+            const minutes = Math.floor(remaining / 60);
+            const seconds = remaining % 60;
+            return remaining > 0 ? (
+              <Text style={{ marginTop: 4, fontSize: 12, color: '#666' }}>
+                Expira em {minutes}:{seconds.toString().padStart(2, '0')}
+              </Text>
+            ) : (
+              <Text style={{ marginTop: 4, fontSize: 12, color: '#e11d48' }}>
+                Código expirado
+              </Text>
+            );
+          })()}
+        </View>
+      )}
     </View>
   );
 

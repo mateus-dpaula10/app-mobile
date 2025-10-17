@@ -60,7 +60,7 @@ export default function ClientProfile() {
     const [passwordValid, setPasswordValid] = useState(true);
     const [photo, setPhoto] = useState<ImageFile | null>(
         user?.photo
-        ? { uri: `http://192.168.0.79:8000/storage/${user?.photo}`, name: 'profile.jpg', type: 'image/jpeg', isNew: false }
+        ? { uri: `https://infrasonic-fibular-pat.ngrok-free.dev/storage/${user?.photo}`, name: 'profile.jpg', type: 'image/jpeg', isNew: false }
         : null
     );
 
@@ -89,7 +89,7 @@ export default function ClientProfile() {
     
             setPhoto(
                 updated.photo
-                    ? { uri: `http://192.168.0.79:8000/storage/${updated.photo}`, name: 'profile.jpg', type: 'image/jpeg', isNew: false }
+                    ? { uri: `https://infrasonic-fibular-pat.ngrok-free.dev/storage/${updated.photo}`, name: 'profile.jpg', type: 'image/jpeg', isNew: false }
                     : null
             );
         }

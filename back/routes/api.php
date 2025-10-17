@@ -45,6 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/orders-driver', [DriverOrderController::class, 'index'])->name('driver.order.index');
     Route::patch('/orders-driver/{order}/accept', [DriverOrderController::class, 'acceptOrder'])->name('driver.order.acceptOrder');
     Route::patch('/orders-driver/{order}/status', [DriverOrderController::class, 'updateStatus'])->name('driver.order.updateStatus');
+    Route::get('/orders-driver/{id}/pix', [DriverOrderController::class, 'generatePixCode'])->name('driver.order.generatePixCode');
 
     Route::get('/cep/{cep}', function ($cep) {
         $cep = preg_replace('/\D/', '', $cep);

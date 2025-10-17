@@ -25,7 +25,9 @@ class Company extends Model
         'first_purchase_discount_store',
         'first_purchase_discount_store_value',
         'first_purchase_discount_app',
-        'first_purchase_discount_app_value'
+        'first_purchase_discount_app_value',
+        'pix_key',
+        'pix_key_type'
     ];
 
     protected $casts = [

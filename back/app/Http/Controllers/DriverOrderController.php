@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Order;
+use Carbon\Carbon;
 
 class DriverOrderController extends Controller
 {
@@ -59,5 +60,34 @@ class DriverOrderController extends Controller
         $order->save();
 
         return response()->json(['message' => 'Pedido aceito com sucesso.']);
+    }
+
+    public function generatePixCode(string $id)
+    {
+        $user = auth()->user();
+
+        $order = Order::findOrFail($id);
+
+        if ($order->user_id !== $user->id) {
+            return response()->json(['message' => 'Acesso negado'], 403);
+        }
+
+        $pixKey = $order->store->pix_key;
+        if (!$pixKey) {
+            return response()->json(['message' => 'Loja não possui chave PIX cadastrada'], 400);
+        }
+
+        $amount = number_format($order->total, 2, '.', '');
+
+        $pixPayload = [
+            'chave' => $pixKey,
+            'valor' => $amount,
+            'txid'  => $order->code,
+            'expira_em' => Carbon::now()->addMinutes(15)->timestamp
+        ];
+
+        return response()->json([
+            'pix_code' => json_encode($pixPayload)
+        ]);
     }
 }

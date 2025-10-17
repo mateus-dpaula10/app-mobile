@@ -167,7 +167,7 @@ export default function CustomerStoresProducts({ route }: any) {
         {product.images.length > 0 && (
           <View style={{ position: 'relative', width: '100%', height: 200 }}>
             <Image
-              source={{ uri: `http://192.168.0.79:8000/storage/${product.images[currentIndex].image_path}` }}
+              source={{ uri: `https://infrasonic-fibular-pat.ngrok-free.dev/storage/${product.images[currentIndex].image_path}` }}
               style={{ width: '100%', height: '100%' }}
               resizeMode="cover"
             />
@@ -214,11 +214,12 @@ export default function CustomerStoresProducts({ route }: any) {
                   ))}
                 </View>
               </View>
-            ))}
+            ))
+          }
 
           {outOfStock && <Text style={styles.outOfStock}>Esgotado</Text>}
 
-          {!outOfStock && (
+          {!outOfStock && allVariationsSelected && (
             <View style={styles.qtyRow}>
               <TouchableOpacity onPress={() => updateCart(product, -1, selectedVariations)} disabled={quantity <= 0}>
                 <Text style={{ fontSize: 24, color: quantity <= 0 ? '#aaa' : 'gray' }}>−</Text>

@@ -34,6 +34,10 @@ return new class extends Migration
             $table->decimal('delivery_fee', 8, 2)->nullable();
             $table->integer('delivery_radius')->nullable();
             $table->json('opening_hours')->nullable();
+
+            $table->string('pix_key')->nullable();
+            $table->enum('pix_key_type', ['cpf', 'cnpj', 'email', 'phone', 'random'])->nullable();
+
             $table->timestamps();
         });
     }

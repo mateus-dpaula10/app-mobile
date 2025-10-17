@@ -33,19 +33,19 @@ export default function CustomerStores({ navigation }: Props) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const categories = [
-    { name: 'Supermercado', image: 'http://192.168.0.79:8000/categories/supermercado.jpg' },
-    { name: 'Padaria', image: 'http://192.168.0.79:8000/categories/padaria.jpg' },
-    { name: 'Restaurante', image: 'http://192.168.0.79:8000/categories/restaurante.jpg' },
-    { name: 'Bebidas', image: 'http://192.168.0.79:8000/categories/bebidas.jpg' },
-    { name: 'Doces e Sobremesas', image: 'http://192.168.0.79:8000/categories/sobremesas.jpg' },
-    { name: 'Farmácia', image: 'http://192.168.0.79:8000/categories/farmacia.jpg' },
-    { name: 'Pet Shop', image: 'http://192.168.0.79:8000/categories/petshop.jpg' },
-    { name: 'Moda e Acessórios', image: 'http://192.168.0.79:8000/categories/moda.jpg' },
-    { name: 'Eletrônicos', image: 'http://192.168.0.79:8000/categories/eletronicos.jpg' },
-    { name: 'Casa e Decoração', image: 'http://192.168.0.79:8000/categories/casa_decoracao.jpg' },
-    { name: 'Saúde e Beleza', image: 'http://192.168.0.79:8000/categories/beleza.jpg' },
-    { name: 'Esporte e Lazer', image: 'http://192.168.0.79:8000/categories/esportes.jpg' },
-    { name: 'Livraria', image: 'http://192.168.0.79:8000/categories/livraria.jpg' },
+    { name: 'Supermercado', image: 'https://infrasonic-fibular-pat.ngrok-free.dev/categories/supermercado.jpg' },
+    { name: 'Padaria', image: 'https://infrasonic-fibular-pat.ngrok-free.dev/categories/padaria.jpg' },
+    { name: 'Restaurante', image: 'https://infrasonic-fibular-pat.ngrok-free.dev/categories/restaurante.jpg' },
+    { name: 'Bebidas', image: 'https://infrasonic-fibular-pat.ngrok-free.dev/categories/bebidas.jpg' },
+    { name: 'Doces e Sobremesas', image: 'https://infrasonic-fibular-pat.ngrok-free.dev/categories/sobremesas.jpg' },
+    { name: 'Farmácia', image: 'https://infrasonic-fibular-pat.ngrok-free.dev/categories/farmacia.jpg' },
+    { name: 'Pet Shop', image: 'https://infrasonic-fibular-pat.ngrok-free.dev/categories/petshop.jpg' },
+    { name: 'Moda e Acessórios', image: 'https://infrasonic-fibular-pat.ngrok-free.dev/categories/moda.jpg' },
+    { name: 'Eletrônicos', image: 'https://infrasonic-fibular-pat.ngrok-free.dev/categories/eletronicos.jpg' },
+    { name: 'Casa e Decoração', image: 'https://infrasonic-fibular-pat.ngrok-free.dev/categories/casa_decoracao.jpg' },
+    { name: 'Saúde e Beleza', image: 'https://infrasonic-fibular-pat.ngrok-free.dev/categories/beleza.jpg' },
+    { name: 'Esporte e Lazer', image: 'https://infrasonic-fibular-pat.ngrok-free.dev/categories/esportes.jpg' },
+    { name: 'Livraria', image: 'https://infrasonic-fibular-pat.ngrok-free.dev/categories/livraria.jpg' },
   ];
 
   const fetchStores = async () => {
@@ -119,7 +119,7 @@ export default function CustomerStores({ navigation }: Props) {
       <View key={store.id} style={[styles.storeCard, !openNow && { opacity: 0.5 }]}>
         {store.logo && ( 
           <Image 
-            source={{ uri: `http://192.168.0.79:8000/storage/${store.logo.replace(/^\/+/, '')}` }} 
+            source={{ uri: `https://infrasonic-fibular-pat.ngrok-free.dev/storage/${store.logo.replace(/^\/+/, '')}` }} 
             style={styles.storeLogo} 
           />
         )}
