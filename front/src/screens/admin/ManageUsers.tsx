@@ -4,6 +4,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import axios from "axios";
 import { Picker } from "@react-native-picker/picker";
 import api from "../../services/api";
+import { useIsFocused } from "@react-navigation/native";
 
 type Company = {
   id?: number;
@@ -39,6 +40,7 @@ export default function ManageUsers() {
   const [admin, setAdmin] = useState<Admin>({ name: "", email: "", password: "" });
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(false);
+  const isFocused = useIsFocused();
 
   async function loadCompanies() {
     try {
@@ -53,20 +55,22 @@ export default function ManageUsers() {
   }
 
   useEffect(() => {
-    loadCompanies();
-  }, []);
+    if (isFocused) {
+      loadCompanies();
+    }
+  }, [isFocused]);
 
   const fetchCNPJData = async (cnpj: string) => {
     try {
-        const cleanCNPJ = cnpj.replace(/\D/g, '');
-        const { data } = await axios.get(`https://brasilapi.com.br/api/cnpj/v1/${cleanCNPJ}`);
+      const cleanCNPJ = cnpj.replace(/\D/g, '');
+      const { data } = await axios.get(`https://brasilapi.com.br/api/cnpj/v1/${cleanCNPJ}`);
 
-        setCompany(c => ({
-            ...c,
-            legal_name: data.razao_social || '',
-            phone: data.ddd_telefone_1 ? `${data.ddd_telefone_1}` : '',
-            address: `${data.descricao_tipo_de_logradouro} ${data.logradouro}, ${data.numero} - ${data.bairro}, ${data.municipio} - ${data.uf}, ${data.cep}`,
-        }));
+      setCompany(c => ({
+        ...c,
+        legal_name: data.razao_social || '',
+        phone: data.ddd_telefone_1 ? `${data.ddd_telefone_1}` : '',
+        address: `${data.descricao_tipo_de_logradouro} ${data.logradouro}, ${data.numero} - ${data.bairro}, ${data.municipio} - ${data.uf}, ${data.cep}`,
+      }));
     } catch (error) {
         Alert.alert('Erro ao buscar CNPJ', 'CNPJ inválido ou não encontrado.');
     }

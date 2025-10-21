@@ -18,6 +18,11 @@ return new class extends Migration
             $table->string('cnpj')->unique();
             $table->string('phone')->nullable();
             $table->string('address')->nullable();
+            $table->string('cep', 9)->nullable();
+            $table->string('street', 255)->nullable();
+            $table->string('neighborhood', 255)->nullable();
+            $table->string('city', 255)->nullable();
+            $table->string('state', 2)->nullable();
             $table->string('plan')->default('padrao');
             $table->boolean('active')->default(true);
             $table->string('email')->nullable();

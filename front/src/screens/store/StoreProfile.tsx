@@ -42,6 +42,11 @@ export default function StoreProfile() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
+  const [cep, setCep] = useState('');
+  const [street, setStreet] = useState('');
+  const [neighborhood, setNeighborhood] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
   const [category, setCategory] = useState('');
   const [status, setStatus] = useState<string>('active');
   const [deliveryFee, setDeliveryFee] = useState('');
@@ -89,7 +94,14 @@ export default function StoreProfile() {
       setCnpj(company.cnpj || '');
       setPhone(company.phone || '');
       setEmail(company.email || '');
+      setPixKey(company.pix_key || '');
+      setPixKeyType(company.pix_key_type || '');
       setAddress(company.address || '');
+      setCep(company.cep || '');
+      setStreet(company.street || '');
+      setNeighborhood(company.neighborhood || '');
+      setCity(company.city || '');
+      setState(company.state || '');
       if (company.category && categories.includes(company.category)) {
         setCategory(company.category);
       } else {
@@ -100,7 +112,9 @@ export default function StoreProfile() {
       setDeliveryRadius(company.delivery_radius != null ? String(company.delivery_radius) : '');
       setFreeShipping(company.free_shipping ?? false);
       setFirstPurchaseDiscountStore(company.first_purchase_discount_store ?? false);
+      setFirstPurchaseDiscountStoreValue(company.first_purchase_discount_store_value ?? '');
       setFirstPurchaseDiscountApp(company.first_purchase_discount_app ?? false);
+      setFirstPurchaseDiscountAppValue(company.first_purchase_discount_app_value ?? '');
 
       let hours: OpeningHour[] = [];
       if (company.opening_hours) {
@@ -212,7 +226,11 @@ export default function StoreProfile() {
     formData.append('final_name', name);
     formData.append('phone', phone);
     formData.append('email', email);
-    formData.append('address', address);
+    formData.append('cep', cep);
+    formData.append('street', street);
+    formData.append('neighborhood', neighborhood);
+    formData.append('city', city);
+    formData.append('state', state);
     formData.append('pix_key', pixKey);
     formData.append('pix_key_type', pixKeyType);
     formData.append('category', category);
@@ -334,6 +352,29 @@ export default function StoreProfile() {
     }
   }
 
+  const handleSearchCep = async () => {
+    if (!cep) return Alert.alert('Erro', 'Digite o CEP');
+
+    try {
+      const cleanCep = cep.replace(/\D/g, '');
+      const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const data = await res.json();
+
+      if (data.erro) {
+        Alert.alert('Erro', 'CEP não encontrado');
+        return;
+      }
+
+      setStreet(`${data.logradouro}`);
+      setNeighborhood(data.bairro);
+      setCity(data.localidade);
+      setState(data.uf);
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Erro', 'Não foi possível buscar o CEP');
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -352,11 +393,61 @@ export default function StoreProfile() {
           <TextInput style={styles.input} placeholder="CNPJ" value={cnpj} editable={false} />
           <TextInput style={styles.input} placeholder="Telefone" value={formatPhone(phone)} onChangeText={(text) => setPhone(text.replace(/\D/g, ""))} />
           <TextInput style={styles.input} placeholder="E-mail" value={email} onChangeText={setEmail} />
-          <TextInput style={styles.input} placeholder="Endereço" value={address} onChangeText={setAddress} />
+
+          <Text style={styles.label}>Endereço do CNPJ</Text>
+          <TextInput style={styles.input} placeholder="Endereço" value={address} editable={false} />
+
+          <Text style={styles.label}>Endereço da loja</Text>
+          <Text style={styles.label}>CEP</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Digite o CEP para buscar e preencher os dados abaixo dinamicamente"
+            value={cep}
+            onChangeText={(text) => {
+              let digits = text.replace(/\D/g, '');
+              digits = digits.slice(0, 8);
+              if (digits.length > 5) {
+                digits = digits.slice(0, 5) + '-' + digits.slice(5);
+              }
+              setCep(digits);
+            }}
+            keyboardType="numeric"
+            maxLength={9}
+            onBlur={handleSearchCep}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Rua"
+            value={street}
+            onChangeText={setStreet}
+            editable={false}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Bairro"
+            value={neighborhood}
+            onChangeText={setNeighborhood}
+            editable={false}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Cidade"
+            value={city}
+            onChangeText={setCity}
+            editable={false}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Estado"
+            value={state}
+            onChangeText={setState}
+            editable={false}
+          />
 
           <Text style={styles.label}>Chave PIX</Text>
-          <View style={{ marginBottom: 8 }}>
+          <View style={styles.pickerWrapper}>
             <Picker selectedValue={pixKeyType} onValueChange={(v) => setPixKeyType(v)}>
+              <Picker.Item label="Selecione o tipo da chave" value="" />
               <Picker.Item label="CPF" value="cpf" />
               <Picker.Item label="CNPJ" value="cnpj" />
               <Picker.Item label="E-mail" value="email" />

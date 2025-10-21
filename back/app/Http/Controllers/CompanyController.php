@@ -103,7 +103,12 @@ class CompanyController extends Controller
             'opening_hours.*.open'                => 'required_with:opening_hours|string|max:5',
             'opening_hours.*.close'               => 'required_with:opening_hours|string|max:5',
             'pix_key'                             => 'nullable|string|max:255',
-            'pix_key_type'                        => 'nullable|in:cpf,cnpj,email,phone,random'
+            'pix_key_type'                        => 'nullable|in:cpf,cnpj,email,phone,random',
+            'cep'                                 => 'nullable|string|max:9',
+            'street'                              => 'nullable|string|max:255',
+            'neighborhood'                        => 'nullable|string|max:255',
+            'city'                                => 'nullable|string|max:255',
+            'state'                               => 'nullable|string|max:2',
         ], [
             'email.email'                            => 'O e-mail informado não é válido.',
             'email.unique'                           => 'Este e-mail já está sendo usado por outra empresa.',
@@ -127,7 +132,12 @@ class CompanyController extends Controller
             'first_purchase_discount_store_value.in' => 'O desconto da loja deve ser 15%, 20% ou 25%.',
             'first_purchase_discount_app_value.in'   => 'O desconto do app deve ser 15%, 20% ou 25%.',
             'pix_key.max'                            => 'A chave PIX não pode ter mais de :max caracteres.',
-            'pix_key_type.in'                        => 'Tipo da chave PIX inválido.'
+            'pix_key_type.in'                        => 'Tipo da chave PIX inválido.',
+            'cep.max'                                => 'O CEP não pode ter mais de :max caracteres.',
+            'street.max'                             => 'O nome da rua não pode ter mais de :max caracteres.',
+            'neighborhood.max'                       => 'O bairro não pode ter mais de :max caracteres.',
+            'city.max'                               => 'O nome da cidade não pode ter mais de :max caracteres.',
+            'state.max'                              => 'O estado deve ter no máximo 2 caracteres.'
         ]);
 
         if ($request->hasFile('logo')) {
@@ -143,6 +153,11 @@ class CompanyController extends Controller
 
         $company->final_name = $request->final_name ?? $company->final_name;
         $company->email = $request->email ?? $company->email;
+        $company->cep = $request->cep ?? $company->cep;
+        $company->street = $request->street ?? $company->street;
+        $company->neighborhood = $request->neighborhood ?? $company->neighborhood;
+        $company->city = $request->city ?? $company->city;
+        $company->state = $request->state ?? $company->state;
         $company->category = $request->category ?? $company->category;
         $company->status = $request->status ?? $company->status;
         $company->delivery_fee = $request->delivery_fee !== '' ? $request->delivery_fee : null;

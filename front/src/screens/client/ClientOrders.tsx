@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import * as Clipboard from 'expo-clipboard';
 import {
   View,
   Text,
@@ -10,6 +11,7 @@ import {
   Platform,
   ScrollView,
   TouchableOpacity,
+  ToastAndroid,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../services/api';
@@ -78,7 +80,9 @@ export default function ClientOrders() {
   };
 
   useEffect(() => {
-    if (isFocused) fetchOrders();
+    if (isFocused) {
+      fetchOrders()
+    };
   }, [isFocused]);
 
   const getPixCode = async (orderId: number, orderCode: string) => {
@@ -237,26 +241,104 @@ export default function ClientOrders() {
         </TouchableOpacity>
       </View>
 
-      {selectedPayment[item.id] === 'pix' && pixCodes[item.id] && (
-        <View style={{ marginTop: 36 }}>
-          <Text style={{ marginBottom: 6 }}>Pague via PIX usando este QR Code:</Text>
-          <QRCode value={pixCodes[item.id].code} size={180} />
-          {(() => {
-            const remaining = pixCodes[item.id].expiresAt - Math.floor(Date.now() / 1000);
-            const minutes = Math.floor(remaining / 60);
-            const seconds = remaining % 60;
-            return remaining > 0 ? (
-              <Text style={{ marginTop: 4, fontSize: 12, color: '#666' }}>
-                Expira em {minutes}:{seconds.toString().padStart(2, '0')}
-              </Text>
-            ) : (
-              <Text style={{ marginTop: 4, fontSize: 12, color: '#e11d48' }}>
-                Código expirado
-              </Text>
-            );
-          })()}
-        </View>
-      )}
+      {selectedPayment[item.id] === 'pix' && pixCodes[item.id] && (() => {
+        const now = Math.floor(Date.now() / 1000);
+        const remaining = pixCodes[item.id].expiresAt - now;
+        const minutes = Math.floor(remaining / 60);
+        const seconds = remaining % 60;
+
+        let displayText = pixCodes[item.id].code;
+
+        try {
+          const parsed = JSON.parse(pixCodes[item.id].code);
+
+          displayText = parsed.payload || parsed.copy || parsed.copia || parsed.pix || parsed.code || displayText;
+
+          if (typeof displayText === 'object') {
+  
+            const keys = Object.keys(parsed);
+            if (keys.length && (parsed.chave || parsed.valor || parsed.txid)) {
+              displayText = `chave:${parsed.chave} valor:${parsed.valor} txid:${parsed.txid}`;
+            } else {
+              displayText = JSON.stringify(parsed);
+            }
+          }
+        } catch (e) {
+          displayText = pixCodes[item.id].code;
+        }
+
+        const copyPixText = async () => {
+          if (!displayText) {
+            Alert.alert('Erro', 'Não há código PIX disponível para copiar.');
+            return;
+          }
+          
+          await Clipboard.setStringAsync(displayText);
+
+          if (Platform.OS === 'android') {
+            ToastAndroid.show('Código PIX copiado', ToastAndroid.SHORT);
+          } else {
+            Alert.alert('Copiado', 'Código PIX copiado para a área de transferência');
+          }
+        };
+
+        return (
+          <View style={{ marginTop: 20, alignItems: 'center' }}>
+            <Text style={{ marginBottom: 6 }}>Pague via PIX usando este QR Code:</Text>
+            <QRCode value={pixCodes[item.id].code} size={180} />
+
+            <View style={{ marginTop: 10, alignItems: 'center' }}>
+              {remaining > 0 ? (
+                <Text style={{ marginTop: 4, fontSize: 12, color: '#666' }}>
+                  Expira em {minutes}:{seconds.toString().padStart(2, '0')}
+                </Text>
+              ) : (
+                <Text style={{ marginTop: 4, fontSize: 12, color: '#e11d48' }}>
+                  Código expirado
+                </Text>
+              )}
+
+              <View
+                style={{
+                  marginTop: 12,
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderWidth: 1,
+                  borderColor: '#ddd',
+                  borderRadius: 8,
+                  width: '100%',
+                  backgroundColor: '#fafafa',
+                }}
+              >
+                <Text
+                  selectable
+                  numberOfLines={2}
+                  ellipsizeMode="middle"
+                  style={{ textAlign: 'center', fontSize: 13, color: '#222' }}
+                >
+                  {displayText}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={copyPixText}
+                style={{
+                  marginTop: 10,
+                  paddingVertical: 8,
+                  paddingHorizontal: 16,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: '#3b82f6',
+                  backgroundColor: '#fff',
+                }}
+              >
+                <Text style={{ color: '#3b82f6', fontWeight: '600' }}>Copiar código</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        );
+      })()}
+
     </View>
   );
 
@@ -266,7 +348,7 @@ export default function ClientOrders() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
     >
-      <ScrollView contentContainerStyle={styles.container}>
+      <View style={styles.container}>
         <Text style={styles.title}>Meus Pedidos</Text>
 
         {orders.length === 0 ? (
@@ -280,7 +362,7 @@ export default function ClientOrders() {
             keyboardShouldPersistTaps="handled"
           />
         )}
-      </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   );
 }

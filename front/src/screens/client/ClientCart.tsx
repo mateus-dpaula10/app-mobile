@@ -126,7 +126,7 @@ export default function ClientCart() {
   };
 
   const calculateDelivery = async (address: Address) => {
-    if (!address) return;
+    if (!address || !company || !cart.length) return;
 
     try {
       if (company?.free_shipping) {

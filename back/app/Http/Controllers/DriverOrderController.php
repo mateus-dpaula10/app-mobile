@@ -65,7 +65,6 @@ class DriverOrderController extends Controller
     public function generatePixCode(string $id)
     {
         $user = auth()->user();
-
         $order = Order::findOrFail($id);
 
         if ($order->user_id !== $user->id) {
@@ -78,16 +77,66 @@ class DriverOrderController extends Controller
         }
 
         $amount = number_format($order->total, 2, '.', '');
+        $merchantName = mb_substr($order->store->final_name, 0, 25);
+        $fullAddress = $order->store->address;
+        $parts = explode(',', $fullAddress);
+        $cep = trim(array_pop($parts));
+        $cityState = trim(array_pop($parts));
+        $stateParts = explode('-', $cityState);
+        $state = strtoupper(trim(end($stateParts)));
+        $street = implode(',', $parts);
+        $addressField = strtoupper($fullAddress);
 
-        $pixPayload = [
-            'chave' => $pixKey,
-            'valor' => $amount,
-            'txid'  => $order->code,
-            'expira_em' => Carbon::now()->addMinutes(15)->timestamp
-        ];
+        $buildPixField = function ($id, $value) {
+            $len = strlen($value);
+            return $id . str_pad($len, 2, '0', STR_PAD_LEFT) . $value;
+        };
+
+        $merchantAccountInfo = 
+            $buildPixField('00', 'BR.GOV.BCB.PIX') .
+            $buildPixField('01', $pixKey);
+
+        $payload =
+            $buildPixField('00', '01') .
+            $buildPixField('26', $merchantAccountInfo) .
+            $buildPixField('52', '0000') .
+            $buildPixField('53', '986') .
+            $buildPixField('54', $amount) .
+            $buildPixField('58', 'BR') .
+            $buildPixField('59', strtoupper($merchantName)) .
+            $buildPixField('60', $state) .
+            $buildPixField('62', $buildPixField('05', $order->code));
+
+        $crcInput = $payload . '6304';
+        $crc = strtoupper(dechex($this->crc16($crcInput)));
+        $crc = str_pad($crc, 4, '0', STR_PAD_LEFT);
+
+        $pixCode = $payload . '6304' . $crc;
+        $expiresAt = now()->addMinutes(10)->timestamp;
 
         return response()->json([
-            'pix_code' => json_encode($pixPayload)
+            'pix_code'  => $pixCode,
+            'expira_em' => $expiresAt
         ]);
+    }
+
+    private function crc16($string)
+    {
+        $poly = 0x1021;
+        $crc = 0xFFFF;
+
+        for ($i = 0; $i < strlen($string); $i++) {
+            $crc ^= (ord($string[$i]) << 8);
+            for ($j = 0; $j < 8; $j++) {
+                if (($crc & 0x8000) != 0) {
+                    $crc = ($crc << 1) ^ $poly;
+                } else {
+                    $crc <<= 1;
+                }
+                $crc &= 0xFFFF;
+            }
+        }
+
+        return $crc;
     }
 }
